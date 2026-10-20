@@ -182,8 +182,7 @@ class Updater:
             self.lib.store.touch()
             self.lib.store.save()
             if mode == "installed":
-                subprocess.Popen([self.file, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
-                                 creationflags=0x00000008 | 0x00000200, close_fds=True)
+                _spawn([self.file, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"])
             else:
                 self._apply_portable()
         except Exception as e:
@@ -205,12 +204,26 @@ class Updater:
         # pasta solta sem portable.flag continua guardando os dados no %APPDATA%
         keep_flag = "" if is_portable() else " /XF portable.flag"
         script = work / "aplicar_update.cmd"
-        script.write_text(
-            "@echo off\r\n"
-            f":esperar\r\ntasklist /FI \"PID eq {os.getpid()}\" | find \"{os.getpid()}\" >nul && (timeout /t 1 /nobreak >nul & goto esperar)\r\n"
-            f"robocopy \"{src}\" \"{app_dir}\" /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP{keep_flag} >nul\r\n"
-            f"start \"\" \"{exe}\"\r\n"
-            f"rmdir /s /q \"{work}\" & exit\r\n",
-            encoding="mbcs")
-        subprocess.Popen(["cmd", "/c", str(script)], cwd=str(work),
-                         creationflags=0x08000000 | 0x00000008, close_fds=True)  # sem janela, desanexado
+        pid = os.getpid()
+        lines = [
+            "@echo off",
+            # espera o LZ Launcher fechar
+            ":esperar",
+            f'tasklist /FI "PID eq {pid}" /NH | find "{pid}" >nul && (ping -n 2 127.0.0.1 >nul & goto esperar)',
+            f'robocopy "{src}" "{app_dir}" /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP{keep_flag} >nul',
+            f'cd /d "{app_dir}"',
+            f'start "" "{exe}"',
+            f'rmdir /s /q "{work}" & exit',
+        ]
+        with open(script, "w", encoding="mbcs", newline="\r\n") as f:
+            f.write("\n".join(lines) + "\n")
+        _spawn(["cmd", "/c", str(script)], cwd=tempfile.gettempdir())
+
+
+def _spawn(cmd: list, cwd: str | None = None):
+    """Inicia um processo invisível que sobrevive ao fechamento do LZ Launcher."""
+    base = 0x08000000 | 0x00000200  # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+    try:
+        subprocess.Popen(cmd, cwd=cwd, creationflags=base | 0x01000000, close_fds=True)  # + BREAKAWAY_FROM_JOB
+    except OSError:
+        subprocess.Popen(cmd, cwd=cwd, creationflags=base, close_fds=True)

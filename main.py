@@ -48,6 +48,12 @@ def main():
     window.events.closing += on_closing
     tray.start()
     lib.start()
+    if "--update" in sys.argv:  # "LZ Launcher.exe --update": procura e instala a versão nova direto
+        def update_now():
+            info = lib.updater.check(auto=False)
+            if info["status"] in ("available", "ready"):
+                lib.updater.install()
+        threading.Thread(target=update_now, daemon=True).start()
     webview.start(debug="--debug" in sys.argv, private_mode=False)
     tray.stop()
     lib.tracker.stop()
