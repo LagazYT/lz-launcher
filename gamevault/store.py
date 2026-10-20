@@ -52,9 +52,10 @@ class Store:
             except OSError:
                 pass
 
-    def save(self):
+    def save(self, bump=True):
         with self.lock:
-            self.revision += 1
+            if bump:
+                self.revision += 1
             tmp = str(self.path) + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=1)

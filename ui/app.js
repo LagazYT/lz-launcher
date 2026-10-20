@@ -20,11 +20,11 @@ const COL_TITLES = { favorites: "Favoritos", recent: "Jogados recentemente", hid
 const state = {
   lib: { games: [], folders: [], settings: {} },
   revision: -1,
-  nav: localGet("nav", "all"),
+  nav: "all",  // nav, sort e view são carregados das preferências salvas no boot()
   col: null,
   query: "",
-  sort: localGet("sort", "name"),
-  view: localGet("view", "grid"),
+  sort: "name",
+  view: "grid",
   running: {},
   scanning: false,
   current: null,
@@ -33,8 +33,21 @@ const state = {
   updateToastShown: false,
 };
 
-function localGet(k, d) { try { return localStorage.getItem("lz_" + k) ?? d; } catch { return d; } }
-function localSet(k, v) { try { localStorage.setItem("lz_" + k, v); } catch { /* ignore */ } }
+// Preferências da interface (tamanho das capas, grade/lista, ordem, tamanho das janelas...).
+// Ficam salvas pelo app junto com a biblioteca: o localStorage do WebView não serve, porque a
+// interface abre numa porta diferente a cada vez e o navegador trata cada porta como outro site.
+let UI = {};
+const uiTimers = {};
+function localGet(k, d) {
+  if (Object.prototype.hasOwnProperty.call(UI, k)) return UI[k];
+  try { return localStorage.getItem("lz_" + k) ?? d; } catch { return d; }
+}
+function localSet(k, v) {
+  UI[k] = v;
+  try { localStorage.setItem("lz_" + k, v); } catch { /* ignore */ }
+  clearTimeout(uiTimers[k]);
+  uiTimers[k] = setTimeout(() => api("set_ui_pref", k, v).catch(() => { }), 350);
+}
 
 /* ---------------- API ---------------- */
 async function api(name, ...args) {
@@ -410,7 +423,7 @@ function bindModalResize() {
   });
   grip.addEventListener("dblclick", () => {
     card.style.width = ""; card.style.height = "";
-    try { localStorage.removeItem("lz_modal:" + card.dataset.key); } catch { /* ignore */ }
+    localSet("modal:" + card.dataset.key, "null");
   });
 }
 function closeModal() { $("#modal").hidden = true; $("#modal-body").innerHTML = ""; $("#modal-body").onclick = null; $("#modal-body").onchange = null; }
@@ -759,6 +772,10 @@ function bindEvents() {
 }
 
 async function boot() {
+  try { UI = (await api("ui_prefs")) || {}; } catch { UI = {}; }
+  state.nav = localGet("nav", "all");
+  state.sort = localGet("sort", "name");
+  state.view = localGet("view", "grid");
   $("#sort").value = state.sort;
   const size = localGet("size", "170");
   $("#size").value = size;

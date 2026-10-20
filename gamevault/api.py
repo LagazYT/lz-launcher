@@ -152,6 +152,20 @@ class Api:
             self._lib.resolve_art_async(force=True)
         return True
 
+    # --- preferências da interface -------------------------------------------
+    def ui_prefs(self):
+        return dict(self._lib.store.settings.get("ui") or {})
+
+    def set_ui_pref(self, key, value):
+        if not isinstance(key, str) or len(key) > 80 or not isinstance(value, (str, int, float, bool)):
+            return False
+        prefs = self._lib.store.settings.setdefault("ui", {})
+        if prefs.get(key) == value:
+            return True
+        prefs[key] = value
+        self._lib.store.save(bump=False)  # não precisa recarregar a interface
+        return True
+
     # --- atualizações ---------------------------------------------------------
     def update_info(self):
         return self._lib.updater.info()
