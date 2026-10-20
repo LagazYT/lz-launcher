@@ -370,11 +370,48 @@ async function toggleFav(id) {
 
 /* ---------------- Modais ---------------- */
 function openModal(title, body, foot = "", wide = false) {
+  const card = $(".modal-card");
+  const reopen = !$("#modal").hidden && card.dataset.key === title;
   $("#modal-title").textContent = title;
   $("#modal-body").innerHTML = body;
   $("#modal-foot").innerHTML = foot;
-  $(".modal-card").classList.toggle("wide", wide);
+  card.classList.toggle("wide", wide);
+  if (!reopen) {
+    // cada janela lembra o tamanho que o usuário deixou
+    card.dataset.key = title;
+    const saved = (() => { try { return JSON.parse(localGet("modal:" + title, "null")); } catch { return null; } })();
+    card.style.width = saved ? saved.w + "px" : "";
+    card.style.height = saved ? saved.h + "px" : "";
+  }
   $("#modal").hidden = false;
+}
+
+function bindModalResize() {
+  const grip = $("#modal-grip"), card = $(".modal-card"), modal = $("#modal");
+  grip.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { grip.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    const r = card.getBoundingClientRect();
+    const start = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+    modal.classList.add("resizing");
+    const move = ev => {
+      // a janela fica centralizada, então cresce para os dois lados: dobra o deslocamento
+      card.style.width = Math.max(360, start.w + (ev.clientX - start.x) * 2) + "px";
+      card.style.height = Math.max(220, start.h + (ev.clientY - start.y) * 2) + "px";
+    };
+    const up = () => {
+      grip.removeEventListener("pointermove", move);
+      modal.classList.remove("resizing");
+      const nr = card.getBoundingClientRect();
+      localSet("modal:" + card.dataset.key, JSON.stringify({ w: Math.round(nr.width), h: Math.round(nr.height) }));
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up, { once: true });
+  });
+  grip.addEventListener("dblclick", () => {
+    card.style.width = ""; card.style.height = "";
+    try { localStorage.removeItem("lz_modal:" + card.dataset.key); } catch { /* ignore */ }
+  });
 }
 function closeModal() { $("#modal").hidden = true; $("#modal-body").innerHTML = ""; $("#modal-body").onclick = null; $("#modal-body").onchange = null; }
 
@@ -665,7 +702,10 @@ function bindEvents() {
   $("#btn-rescan").onclick = async () => { await api("rescan", false); toast("Procurando jogos novos…"); };
   $("#btn-settings").onclick = settingsModal;
   $("#modal-close").onclick = closeModal;
-  $("#modal").onclick = e => { if (e.target.id === "modal" || e.target.closest("[data-close]")) closeModal(); };
+  // fecha ao clicar fora, mas não quando o clique termina fora depois de arrastar/selecionar dentro da janela
+  let downOnBackdrop = false;
+  $("#modal").onpointerdown = e => { downOnBackdrop = e.target.id === "modal"; };
+  $("#modal").onclick = e => { if ((e.target.id === "modal" && downOnBackdrop) || e.target.closest("[data-close]")) closeModal(); };
   $("#d-back").onclick = closeDetails;
   $("#d-play").onclick = () => isRunning(state.current) ? stopGame(state.current) : playGame(state.current);
   $("#d-alt").onclick = async () => {
@@ -726,6 +766,7 @@ async function boot() {
   if (QP.get("view")) state.view = QP.get("view");
   if (QP.get("nav")) state.nav = QP.get("nav");
   bindEvents();
+  bindModalResize();
   await reload();
   if (QP.get("game")) {
     const g = state.lib.games.find(x => x.name.toLowerCase().includes(QP.get("game").toLowerCase()));
