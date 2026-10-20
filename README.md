@@ -1,60 +1,88 @@
-<p align="center"><img src="logo.png" width="128" alt="LZ Launcher"></p>
+<p align="center"><img src="logo.png" width="112" alt="LZ Launcher"></p>
 
 # LZ Launcher
 
-Biblioteca e launcher para Windows que junta num lugar só os seus **jogos recompilados**
-(ports nativos de jogos de PS4, PS3, Xbox etc.) e os seus **jogos de PC**, com capas,
-tempo de jogo e atualização automática.
+**Criado por Lagaz** · Windows 10/11 64-bit
+
+Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC**. Ele reconhece cada jogo sozinho, mostra a **capa correta**, conta o **tempo de jogo** e abre tudo com um clique.
+
+![Biblioteca](docs/screenshots/biblioteca.png)
 
 ## Download
 
-Na página de [Releases](https://github.com/LagazYT/lz-launcher/releases/latest):
+Na página de [**Releases**](../../releases/latest):
 
 | Arquivo | Para quem |
 |---|---|
-| `LZ-Launcher-Setup-x.y.z.exe` | Instalador. Cria atalhos no Menu Iniciar/Área de Trabalho e não precisa de administrador. |
-| `LZ-Launcher-Portable-x.y.z.zip` | Versão portable. Extraia em qualquer pasta (até num pendrive) e abra `LZ Launcher.exe`. Os dados ficam na pasta `data` ao lado do programa. |
+| `LZ-Launcher-Setup-x.y.z.exe` | Instala o programa (sem pedir administrador), cria atalhos no Menu Iniciar/Área de Trabalho e aparece em *Configurações → Aplicativos*, com desinstalador. |
+| `LZ-Launcher-Portable-x.y.z.zip` | Não instala nada: extraia em qualquer pasta ou pendrive e abra `LZ Launcher.exe`. Biblioteca e configurações ficam na pasta `data` ao lado do exe. |
 
-Requer Windows 10/11 64 bits (usa o WebView2 que já vem no Windows).
+> O Windows SmartScreen pode avisar "O Windows protegeu o computador", porque os executáveis não têm assinatura digital paga. Clique em **Mais informações → Executar assim mesmo**.
 
-## Recursos
+## Atualizações automáticas
 
-- **Recompilados · Jogos de PC · Todos** na barra lateral, além de Favoritos, Jogados recentemente e Ocultos.
-- **Adicionar pasta de jogos**: cada subpasta vira um jogo, reconhecido automaticamente.
-  - Ports recompilados: dumps de PS4/PS5 (`CUSAxxxxx/sce_sys/param.sfo`), PS3 (`PS3_GAME`),
-    Xbox One (`AppxManifest.xml`) e marcadores de ports (`out/analysis.json`, `eboot.bin`,
-    `Play <Jogo>.exe`, nomes com *PC Port*/*recomp*...). O nome vem do próprio dump.
-  - Jogos da **Steam** e da **Epic Games** instalados no PC também aparecem (opcional).
-- **Capas e fundos** automáticos: arte do próprio jogo, Steam, Wikipédia e SteamGridDB (chave opcional). Dá para trocar por qualquer imagem.
-- **Tempo de jogo**, última vez jogado e sessões — conta mesmo quando o jogo é aberto fora do launcher.
-- Modo **grade** ou **lista**, busca e ordenação.
-- Temas **Sóbrio** e **Neon**.
-- Fechar a janela **minimiza para a bandeja** (opcional).
-- **Atualização automática**: o app verifica as releases deste repositório, avisa quando sai uma versão nova e atualiza com um clique (instalador ou portable).
+O app verifica as [Releases](../../releases) deste repositório ao abrir e a cada 6 horas. Quando sai uma versão nova, aparece um aviso (na tela e na bandeja do Windows) e um cartão na barra lateral com o botão **Atualizar agora**. O app então:
 
-O LZ Launcher nunca altera nada dentro das pastas dos jogos.
+1. baixa o arquivo certo: o Setup, se estiver instalado, ou o Portable;
+2. fecha, aplica a atualização e reabre sozinho;
+3. mantém sua biblioteca, capas e tempo de jogo.
 
-## Desenvolvimento
+Também dá para procurar na hora em **Configurações → Atualizações → Procurar atualizações**, ou por script: `"LZ Launcher.exe" --update`.
 
-```powershell
-py -3.11 -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python main.py
-```
+## O que ele faz
 
-`dev_server.py` sobe só a interface num servidor local para testar no navegador.
+### Recompilados e jogos de PC separados
+![Recompilados](docs/screenshots/recompilados.png)
 
-### Gerar uma versão
+- Barra lateral com **Recompilados**, **Jogos de PC** e **Todos os jogos**, mais as coleções **Favoritos**, **Jogados recentemente** e **Ocultos**.
+- **Adicionar pasta de jogos**: escolha uma pasta com vários jogos (cada subpasta vira um jogo) ou a pasta de um jogo só. Dá para dizer se ela é de Recompilados, Jogos de PC ou deixar no automático.
+- Reconhece ports recompilados por:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File build.ps1
-```
+| O que tem na pasta | O que o app entende |
+|---|---|
+| `CUSAxxxxx/sce_sys/param.sfo` | Dump de **PS4** — nome, Title ID, versão, ícone e imagem de fundo oficiais |
+| `PS3_GAME/PARAM.SFO` | Dump de **PS3** |
+| `AppxManifest.xml` (Xbox) | Dump de **Xbox One** |
+| `Play <Jogo>.exe` + `<Jogo>.exe` | Port com launcher: **Jogar** abre direto no jogo e **Launcher do port** abre as configurações do port |
+| `out/analysis.json`, `eboot.bin`, *PC Port*, *recomp* | Outros ports recompilados |
 
-Cria em `release\` o instalador e o `.zip` portable (precisa do [Inno Setup 6](https://jrsoftware.org/isdl.php) e do PyInstaller).
+- Jogos instalados pela **Steam** e pela **Epic Games** aparecem sozinhos (com o tempo de jogo registrado na Steam).
+- Ignora executáveis auxiliares (instaladores, crash reporters, ferramentas) e escolhe o executável certo de cada jogo. Dá para trocar em **Editar**.
 
-### Publicar uma atualização
+### Página de cada jogo
+![Jogo](docs/screenshots/jogo.png)
 
-1. Aumente `APP_VERSION` em `gamevault/__init__.py` (ex.: `1.2.1`) e faça commit/push.
-2. Crie a release: `gh release create v1.2.1 --title "LZ Launcher 1.2.1" --notes "O que mudou..."`
-3. O GitHub Actions gera e anexa o instalador e o portable à release.
-   Os apps instalados detectam a versão nova e oferecem a atualização.
+- **Jogar**, **tempo de jogo**, **última vez jogado** e **sessões**.
+- O tempo é contado enquanto qualquer processo da pasta do jogo estiver aberto — funciona com ports que abrem outro processo e até quando o jogo é aberto fora do launcher.
+- **Capas e imagens de fundo automáticas**: arte do próprio jogo, loja Steam, Wikipédia (capa da caixa) e [SteamGridDB](https://www.steamgriddb.com) (chave opcional, grátis). Dá para trocar por outra opção ou por qualquer imagem do PC.
+- Favoritar, ocultar, renomear, mudar a categoria, escolher o executável e passar argumentos de inicialização.
+
+### Grade ou lista
+![Lista](docs/screenshots/lista.png)
+
+Alterne entre **grade** de capas (com tamanho ajustável) e **lista** com plataforma, categoria, tempo de jogo e última vez — clique no cabeçalho para ordenar.
+
+### Temas
+![Tema Neon](docs/screenshots/jogo-neon.png)
+
+Dois temas em **Configurações → Aparência**: **Sóbrio** (cinzas neutros) e **Neon** (roxo e ciano, com o destaque *Continue jogando*).
+
+### Bandeja do sistema
+Fechar a janela **minimiza o LZ Launcher para a bandeja**, perto do relógio — ele continua contando o tempo de jogo. Clique duas vezes no ícone para voltar ou em **Sair** para fechar de vez. Dá para desligar nas configurações.
+
+## Aviso
+
+O LZ Launcher **não inclui jogos** nem arquivos de jogos: ele só organiza e abre o que já está no seu PC. Os ports recompilados precisam dos seus próprios dumps, conforme as instruções de cada port. O app **nunca altera** nada dentro das pastas dos jogos. Projeto da comunidade, sem relação com Sony, Microsoft, Valve ou Epic Games.
+
+## Créditos
+
+- [pywebview](https://github.com/r0x0r/pywebview) — janela do app (WebView2)
+- [psutil](https://github.com/giampaolo/psutil) — contagem do tempo de jogo
+- [pystray](https://github.com/moses-palmer/pystray) — ícone na bandeja
+- [Pillow](https://github.com/python-pillow/Pillow) e [icoextract](https://github.com/jlu5/icoextract) — imagens e ícones dos jogos
+- Capas: loja Steam, [Wikipédia](https://www.wikipedia.org) e [SteamGridDB](https://www.steamgriddb.com)
+- [PyInstaller](https://pyinstaller.org) e [Inno Setup](https://jrsoftware.org/isinfo.php) — executável e instalador
+
+## Licença
+
+[MIT](LICENSE) © Lagaz

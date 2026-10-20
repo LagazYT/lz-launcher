@@ -4,6 +4,8 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const TOKEN = new URLSearchParams(location.search).get("t") || "";
+// parâmetros opcionais na URL (usados para gerar as imagens do README): view, nav, theme, game
+const QP = new URLSearchParams(location.search);
 
 const ICON = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5Z"/></svg>',
@@ -618,7 +620,7 @@ async function reload() {
   const lib = await api("library");
   state.lib = lib;
   state.revision = lib.revision;
-  applyTheme(lib.settings.theme);
+  applyTheme(QP.get("theme") || lib.settings.theme);
   render();
 }
 
@@ -721,8 +723,14 @@ async function boot() {
   const size = localGet("size", "170");
   $("#size").value = size;
   document.documentElement.style.setProperty("--card", size + "px");
+  if (QP.get("view")) state.view = QP.get("view");
+  if (QP.get("nav")) state.nav = QP.get("nav");
   bindEvents();
   await reload();
+  if (QP.get("game")) {
+    const g = state.lib.games.find(x => x.name.toLowerCase().includes(QP.get("game").toLowerCase()));
+    if (g) openDetails(g.id);
+  }
   poll();
 }
 
