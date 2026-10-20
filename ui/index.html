@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZ Launcher</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="themes.css">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("lz_theme") || "sober"; } catch (e) { }</script>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="wordmark"><img src="icon.png" alt=""><span>LZ Launcher</span></div>
+
+    <nav class="nav" id="nav">
+      <div class="nav-label">Biblioteca</div>
+      <button class="nav-item" data-nav="all"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Todos os jogos</span><em id="count-all">0</em></button>
+      <button class="nav-item" data-nav="recompiled"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/><path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><span>Recompilados</span><em id="count-recompiled">0</em></button>
+      <button class="nav-item" data-nav="normal"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="1"/><path d="M8 21h8M12 17v4"/></svg><span>Jogos de PC</span><em id="count-normal">0</em></button>
+
+      <div class="nav-label">Coleções</div>
+      <button class="nav-item" data-col="favorites"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z"/></svg><span>Favoritos</span><em id="count-favorites">0</em></button>
+      <button class="nav-item" data-col="recent"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Jogados recentemente</span><em id="count-recent">0</em></button>
+      <button class="nav-item" data-col="hidden"><svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-2.9 4M6.6 6.6C4.5 8 2.9 10 2 12c1 2.5 5 7 10 7 1.6 0 3-.4 4.3-1"/></svg><span>Ocultos</span><em id="count-hidden">0</em></button>
+    </nav>
+
+    <div class="now-playing" id="now-playing" hidden></div>
+    <div class="update-card" id="update-card" hidden></div>
+
+    <div class="sidebar-foot">
+      <div class="menu-wrap">
+        <button class="side-btn" id="btn-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adicionar jogos</button>
+        <div class="menu" id="menu-add" hidden>
+          <button data-act="add-folder"><b>Adicionar pasta de jogos</b><small>Reconhece os jogos da pasta automaticamente</small></button>
+          <button data-act="add-exe"><b>Adicionar jogo pelo executável</b><small>Escolha o .exe de um jogo</small></button>
+        </div>
+      </div>
+      <button class="side-btn" id="btn-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>Configurações</button>
+      <div class="version" id="app-version"></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <!-- Biblioteca -->
+    <section id="library-view" class="view">
+      <header class="lib-head">
+        <div class="lib-title"><h1 id="view-title">Todos os jogos</h1><span id="view-sub"></span></div>
+        <div class="lib-tools">
+          <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search" type="search" placeholder="Buscar" autocomplete="off"></label>
+          <select id="sort" class="select" title="Ordenar">
+            <option value="name">Nome</option>
+            <option value="recent">Última vez jogado</option>
+            <option value="playtime">Tempo de jogo</option>
+            <option value="added">Data de adição</option>
+            <option value="platform">Plataforma</option>
+          </select>
+          <div class="seg" id="view-toggle" title="Modo de exibição">
+            <button data-view="grid" title="Grade"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+            <button data-view="list" title="Lista"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+          </div>
+          <input id="size" type="range" min="120" max="260" step="10" title="Tamanho das capas">
+          <button class="tool-btn" id="btn-rescan" title="Procurar jogos novos"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+        </div>
+      </header>
+      <div id="scanbar" class="scanbar" hidden><span class="spinner"></span><span id="scan-msg">Procurando jogos…</span></div>
+      <div class="scroller" id="scroller">
+        <section id="spotlight" class="spotlight" hidden></section>
+        <section id="grid" class="grid"></section>
+        <section id="list" class="list" hidden></section>
+        <section id="empty" class="empty" hidden></section>
+      </div>
+    </section>
+
+    <!-- Detalhes -->
+    <section id="details" class="view details" hidden>
+      <div class="hero" id="d-heroWrap">
+        <img id="d-hero" alt="">
+        <button class="back" id="d-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Biblioteca</button>
+        <div class="hero-title"><h1 id="d-title"></h1><div id="d-sub" class="hero-sub"></div></div>
+      </div>
+      <div class="actionbar">
+        <button class="btn play" id="d-play"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5Z"/></svg><span>Jogar</span></button>
+        <div class="quick" id="d-quick"></div>
+        <div class="spacer"></div>
+        <button class="btn" id="d-alt" hidden title="Abre o launcher/configurações do próprio port">Launcher do port</button>
+        <button class="btn icon" id="d-fav" title="Favorito"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z"/></svg></button>
+        <button class="btn icon" id="d-folder" title="Abrir pasta do jogo"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></button>
+        <button class="btn icon" id="d-art" title="Trocar capa ou imagem de fundo"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></button>
+        <button class="btn icon" id="d-edit" title="Editar"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      </div>
+      <div class="d-body">
+        <div class="d-cover" id="d-cover"></div>
+        <div class="d-main">
+          <h3>Informações</h3>
+          <dl class="d-meta" id="d-meta"></dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <header><h2 id="modal-title"></h2><button class="tool-btn" id="modal-close" title="Fechar"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+      <div id="modal-body" class="modal-body"></div>
+      <footer id="modal-foot"></footer>
+    </div>
+  </div>
+  <div id="toasts" class="toasts"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

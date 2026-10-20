@@ -1,0 +1,6 @@
+pywebview>=6.0
+psutil
+pillow
+icoextract
+requests
+pystray

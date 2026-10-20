@@ -1,0 +1,50 @@
+name: Build release
+
+# Ao publicar uma release no GitHub (tag vX.Y.Z), gera o instalador e a versão portable
+# e anexa os dois à release. Também pode ser rodado manualmente (Actions → Run workflow).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependências
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Conferir versão
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path gamevault\__init__.py -Pattern 'APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne "${{ github.event.release.tag_name }}") { throw "APP_VERSION ($v) diferente da tag ${{ github.event.release.tag_name }}" }
+
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1 -Python python
+
+      - name: Anexar à release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" release/* --clobber
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lz-launcher
+          path: release/*
