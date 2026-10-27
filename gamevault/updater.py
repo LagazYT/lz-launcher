@@ -20,6 +20,7 @@ from pathlib import Path
 import requests
 
 from . import APP_VERSION, GITHUB_REPO
+from .i18n import tr
 from .paths import data_dir, is_portable
 
 log = logging.getLogger("gamevault.updater")
@@ -127,7 +128,7 @@ class Updater:
                 threading.Thread(target=self.download, daemon=True).start()
         except Exception as e:
             log.warning("update check: %s", e)
-            self.status, self.error = "error", "Não foi possível verificar atualizações (sem internet?)."
+            self.status, self.error = "error", tr("Não foi possível verificar atualizações (sem internet?).", self.lib.lang())
         finally:
             self._lock.release()
             self.lib.store.touch()
@@ -164,7 +165,7 @@ class Updater:
             return True
         except Exception as e:
             log.warning("update download: %s", e)
-            self.status, self.error = "error", "Falha ao baixar a atualização. Tente de novo."
+            self.status, self.error = "error", tr("Falha ao baixar a atualização. Tente de novo.", self.lib.lang())
             return False
         finally:
             self.lib.store.touch()
@@ -173,10 +174,10 @@ class Updater:
         """Baixa (se preciso) e instala. O app é fechado e reaberto já atualizado."""
         mode = install_mode()
         if mode == "source":
-            return {"ok": False, "error": "Rodando pelo código-fonte: atualize com git pull. Abrindo a página da release…",
+            return {"ok": False, "error": tr("Rodando pelo código-fonte: atualize com git pull. Abrindo a página da release…", self.lib.lang()),
                     "url": (self.latest or {}).get("url")}
         if self.status != "ready" and not self.download():
-            return {"ok": False, "error": self.error or "Nenhuma atualização disponível."}
+            return {"ok": False, "error": self.error or tr("Nenhuma atualização disponível.", self.lib.lang())}
         try:
             self.status = "installing"
             self.lib.store.touch()
@@ -187,7 +188,7 @@ class Updater:
                 self._apply_portable()
         except Exception as e:
             log.exception("update install")
-            self.status, self.error = "error", f"Falha ao instalar: {e}"
+            self.status, self.error = "error", tr("Falha ao instalar: {error}", self.lib.lang(), error=e)
             return {"ok": False, "error": self.error}
         if self.quit_app:
             threading.Timer(1.0, self.quit_app).start()

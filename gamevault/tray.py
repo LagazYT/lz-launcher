@@ -5,11 +5,13 @@ from PIL import Image
 import pystray
 
 from . import APP_NAME
+from .i18n import tr
 from .paths import UI_DIR
 
 
 class Tray:
-    def __init__(self, on_open, on_quit):
+    def __init__(self, on_open, on_quit, lang="pt"):
+        self.lang = lang
         self._on_open = on_open
         self._on_quit = on_quit
         self._notified = False
@@ -18,9 +20,9 @@ class Tray:
         except OSError:
             image = Image.new("RGBA", (64, 64), (232, 163, 61, 255))
         menu = pystray.Menu(
-            pystray.MenuItem(f"Abrir {APP_NAME}", lambda: self._on_open(), default=True),
+            pystray.MenuItem(tr("Abrir {app}", lang, app=APP_NAME), lambda: self._on_open(), default=True),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Sair", lambda: self._on_quit()),
+            pystray.MenuItem(tr("Sair", lang), lambda: self._on_quit()),
         )
         self.icon = pystray.Icon("lzlauncher", image, APP_NAME, menu)
 
@@ -32,7 +34,8 @@ class Tray:
             return
         self._notified = True
         try:
-            self.icon.notify(f"O {APP_NAME} continua aberto aqui na bandeja. Clique duas vezes no ícone para voltar.", APP_NAME)
+            self.icon.notify(tr("O {app} continua aberto aqui na bandeja. Clique duas vezes no ícone para voltar.",
+                                self.lang, app=APP_NAME), APP_NAME)
         except Exception:
             pass
 

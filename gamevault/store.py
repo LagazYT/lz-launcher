@@ -9,6 +9,13 @@ from .paths import LIBRARY_FILE, data_dir
 DEFAULT_SETTINGS = {
     "import_steam": True,
     "import_epic": True,
+    "import_gog": True,
+    "import_ubisoft": True,
+    "import_ea": True,
+    "import_battlenet": True,
+    "import_xbox": True,
+    "language": "auto",
+    "tv_on_start": False,
     "online_art": True,
     "steamgriddb_key": "",
     "track_external": True,

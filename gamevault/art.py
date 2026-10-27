@@ -28,11 +28,15 @@ def _norm_title(t: str) -> str:
 
 
 def _get(url, **kw):
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             r = _session.get(url, timeout=12, **kw)
-            if r.status_code == 429:
-                time.sleep(1.5 * (attempt + 1))
+            if r.status_code == 429:  # limite de requisições: espera o tempo pedido pelo servidor
+                try:
+                    wait = float(r.headers.get("Retry-After") or 0)
+                except ValueError:
+                    wait = 0
+                time.sleep(min(max(wait, 2.0 * (attempt + 1)), 20))
                 continue
             return r
         except requests.RequestException:
@@ -86,6 +90,17 @@ def steam_download(appid: int, game_id: str, kind: str) -> str | None:
         if p:
             return p
     return None
+
+
+# --- GOG ----------------------------------------------------------------------------
+def gog_art_urls(gog_id: str) -> dict:
+    r = _get(f"https://api.gog.com/v2/games/{gog_id}", params={"locale": "en-US"})
+    try:
+        links = r.json().get("_links", {})
+    except Exception:
+        return {}
+    return {"cover": (links.get("boxArtImage") or {}).get("href"),
+            "hero": (links.get("backgroundImage") or {}).get("href")}
 
 
 # --- SteamGridDB (opcional, precisa de chave da API) -------------------------------

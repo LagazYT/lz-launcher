@@ -7,7 +7,9 @@ import threading
 import time
 from pathlib import Path
 
-from . import art, platforms
+from . import art, platforms, stores
+from .i18n import resolve as resolve_lang, tr
+from .info import fetch_info
 from .paths import norm
 from .scanner import scan_folder, detect_game, game_id_for
 from .store import Store
@@ -18,7 +20,10 @@ log = logging.getLogger("gamevault.library")
 
 AUTO_KEYS = ("root", "folder_name", "platform", "title_id", "version", "art_local", "dump", "name_auto",
              "kind_auto", "exe_auto", "alt_exe", "exes", "images", "source", "launch_uri",
-             "ext_playtime", "ext_last_played")
+             "ext_playtime", "ext_last_played", "art_urls", "args_auto", "gog_id")
+# lojas que abrem o jogo por um link próprio (steam://, uplay://, shell:AppsFolder...)
+URI_SOURCES = ("steam", "epic", "ubisoft", "xbox")
+INFO_RETRY = 7 * 86400
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
 
 
@@ -32,6 +37,9 @@ class Library:
         self.art_busy = False
         self._art_lock = threading.Lock()
         self._local_tokens: dict[str, str] = {}
+
+    def lang(self) -> str:
+        return resolve_lang(self.store.settings.get("language"))
 
     # ------------------------------------------------------------------ varredura
     def start(self):
@@ -48,12 +56,13 @@ class Library:
     def _rescan(self, force_art=False):
         self.scanning = True
         try:
-            self.scan_message = "Procurando jogos..."
+            lang = self.lang()
+            self.scan_message = tr("Procurando jogos...", lang)
             self.store.touch()
             st = self.store.settings
             found: list[dict] = []
             if st.get("import_steam"):
-                self.scan_message = "Lendo biblioteca da Steam..."
+                self.scan_message = tr("Lendo biblioteca da Steam...", lang)
                 try:
                     found += platforms.find_steam_games()
                 except Exception as e:
@@ -63,9 +72,18 @@ class Library:
                     found += platforms.find_epic_games()
                 except Exception as e:
                     log.warning("epic: %s", e)
+            for key, (label, finder) in stores.STORES.items():
+                if not st.get(key, True):
+                    continue
+                self.scan_message = tr("Lendo jogos da {store}...", lang, store=label)
+                self.store.touch()
+                try:
+                    found += finder()
+                except Exception as e:
+                    log.warning("%s: %s", label, e)
             platform_roots = {norm(g["root"]) for g in found}
             for folder in list(self.store.folders):
-                self.scan_message = f"Escaneando {folder['path']}..."
+                self.scan_message = tr("Escaneando {path}...", lang, path=folder["path"])
                 self.store.touch()
                 try:
                     for g in scan_folder(folder["path"], folder.get("mode", "auto")):
@@ -128,6 +146,10 @@ class Library:
                         self._resolve_one(gid, g, force)
                     except Exception as e:
                         log.warning("art %s: %s", gid, e)
+                    try:
+                        self._resolve_info(g, force)
+                    except Exception as e:
+                        log.warning("info %s: %s", gid, e)
                     self.store.touch()
             finally:
                 self.art_busy = False
@@ -147,6 +169,14 @@ class Library:
         name = g.get("name") or g.get("name_auto") or ""
         appid = g.get("steam_appid")
         kind = g.get("kind") or g.get("kind_auto")
+        gog_id = (g.get("art_urls") or {}).get("gog")
+        if gog_id and (not local.get("cover") and not online.get("cover")):
+            urls = art.gog_art_urls(gog_id)
+            if urls.get("cover"):
+                online["cover"] = art.download(urls["cover"], gid, "cover")
+                online["source"] = "GOG"
+            if urls.get("hero") and not local.get("hero") and not online.get("hero"):
+                online["hero"] = art.download(urls["hero"], gid, "hero")
         if not appid and kind == "normal" and g.get("source") != "steam":
             appid = art.steam_match(name)
             if appid:
@@ -177,6 +207,43 @@ class Library:
                 online["source"] = "Wikipédia"
         g["art_online"] = {k: v for k, v in online.items() if v}
         g["art_checked"] = time.time()
+
+    def _resolve_info(self, g: dict, force=False):
+        """Descrição, gênero, desenvolvedora, ano e Metacritic no idioma atual."""
+        if not self.store.settings.get("online_art", True):
+            return
+        lang = self.lang()
+        info = g.get("info") or {}
+        if not force and info.get("lang") == lang and (info.get("description") or info.get("genres")):
+            return
+        fail = g.get("info_fail") or {}
+        if not force and fail.get("lang") == lang and time.time() - fail.get("t", 0) < fail.get("retry", INFO_RETRY):
+            return
+        name = g.get("name") or g.get("name_auto") or ""
+        appid = g.get("steam_appid") or g.get("steam_appid_guess")
+        new = fetch_info(name, appid, lang)
+        if new and (new.get("description") or new.get("genres")):
+            g["info"] = new
+            g.pop("info_fail", None)
+        elif new and new.get("_net_error"):
+            g["info_fail"] = {"lang": lang, "t": time.time(), "retry": 3600}  # sem internet: tenta em 1 hora
+        else:
+            g["info_fail"] = {"lang": lang, "t": time.time()}
+        time.sleep(0.4)  # não sobrecarrega a Steam/Wikipédia
+
+    def refresh_info(self, gid: str | None = None):
+        def run():
+            ids = [gid] if gid else list(self.store.games)
+            for i in ids:
+                g = self.store.games.get(i)
+                if g and not g.get("missing"):
+                    try:
+                        self._resolve_info(g, force=bool(gid))
+                    except Exception as e:
+                        log.warning("info %s: %s", i, e)
+                    self.store.touch()
+            self.store.save()
+        threading.Thread(target=run, daemon=True).start()
 
     def image_path(self, gid: str, kind: str) -> str | None:
         g = self.store.games.get(gid)
@@ -252,22 +319,23 @@ class Library:
     # ------------------------------------------------------------------ execução
     def launch(self, gid: str, alt=False) -> dict:
         g = self.store.games.get(gid)
+        lang = self.lang()
         if not g:
-            return {"ok": False, "error": "Jogo não encontrado."}
+            return {"ok": False, "error": tr("Jogo não encontrado.", lang)}
         target = None
         if alt:
             target = g.get("alt_exe")
         else:
-            target = g.get("exe") or (None if g.get("launch_uri") and g.get("source") in ("steam", "epic") else g.get("exe_auto"))
+            target = g.get("exe") or (None if g.get("launch_uri") and g.get("source") in URI_SOURCES else g.get("exe_auto"))
         try:
             if not target and g.get("launch_uri") and not alt:
                 os.startfile(g["launch_uri"])
             elif target:
                 if not os.path.isfile(target):
-                    return {"ok": False, "error": f"Executável não existe mais:\n{target}"}
+                    return {"ok": False, "error": tr("Executável não existe mais:\n{path}", lang, path=target)}
                 cwd = os.path.dirname(target)
                 ext = os.path.splitext(target)[1].lower()
-                args = (g.get("args") or "").strip()
+                args = (g.get("args") or ("" if g.get("exe") else g.get("args_auto")) or "").strip()
                 if ext in (".exe", ".com"):
                     cmd = subprocess.list2cmdline([target]) + (" " + args if args else "")
                     flags = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
@@ -275,7 +343,7 @@ class Library:
                 else:
                     os.startfile(target, cwd=cwd) if args == "" else os.startfile(target, arguments=args, cwd=cwd)
             else:
-                return {"ok": False, "error": "Nenhum executável definido para este jogo. Use \"Editar\" para escolher o .exe."}
+                return {"ok": False, "error": tr("Nenhum executável definido para este jogo. Use \"Editar\" para escolher o .exe.", lang)}
         except OSError as e:
             return {"ok": False, "error": str(e)}
         self.tracker.mark_launched(gid)
@@ -359,6 +427,8 @@ class Library:
             "icon": ver("icon"),
             "cover_custom": bool(g.get("cover")),
             "art_source": (g.get("art_online") or {}).get("source"),
+            "info": g.get("info"),
+            "history": g.get("history") or [],
         }
 
     @staticmethod
@@ -377,6 +447,7 @@ class Library:
             "folders": self.store.folders,
             "settings": self.store.settings,
             "revision": self.store.revision,
+            "lang": self.lang(),
         }
 
     def status(self) -> dict:

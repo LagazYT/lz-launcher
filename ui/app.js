@@ -4,7 +4,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const TOKEN = new URLSearchParams(location.search).get("t") || "";
-// parâmetros opcionais na URL (usados para gerar as imagens do README): view, nav, theme, game
+// parâmetros opcionais na URL (usados para gerar as imagens do README): view, nav, theme, game, page, lang, tv
 const QP = new URLSearchParams(location.search);
 
 const ICON = {
@@ -12,15 +12,18 @@ const ICON = {
   stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>',
   down: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+  link: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
 };
 
-const NAV_TITLES = { all: "Todos os jogos", recompiled: "Recompilados", normal: "Jogos de PC" };
-const COL_TITLES = { favorites: "Favoritos", recent: "Jogados recentemente", hidden: "Ocultos" };
+const THEMES = ["sober", "neon", "cyberpunk", "nintendo", "playstation", "xbox"];
+const AMBIENT_THEMES = ["playstation", "xbox", "cyberpunk"];
 
 const state = {
   lib: { games: [], folders: [], settings: {} },
   revision: -1,
-  nav: "all",  // nav, sort e view são carregados das preferências salvas no boot()
+  page: "library",   // library | stats
+  nav: "all",        // nav, sort e view são carregados das preferências salvas no boot()
   col: null,
   query: "",
   sort: "name",
@@ -31,6 +34,7 @@ const state = {
   update: null,
   updateDismissed: false,
   updateToastShown: false,
+  tv: false,
 };
 
 // Preferências da interface (tamanho das capas, grade/lista, ordem, tamanho das janelas...).
@@ -60,46 +64,60 @@ async function api(name, ...args) {
 }
 
 /* ---------------- Formatação ---------------- */
-function fmtPlaytime(sec, empty = "Nunca jogado") {
+function fmtPlaytime(sec, empty) {
   sec = Math.floor(sec || 0);
-  if (sec < 60) return sec > 0 ? "menos de 1 min" : empty;
+  if (sec < 60) return sec > 0 ? t("menos de 1 min") : (empty ?? t("Nunca jogado"));
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
   if (h === 0) return `${m} min`;
   if (h >= 100) return `${h} h`;
   return m ? `${h} h ${m} min` : `${h} h`;
+}
+function fmtHours(sec) {
+  const h = (sec || 0) / 3600;
+  if (h === 0) return "0 h";
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} min`;
+  return h < 10 ? `${h.toFixed(1).replace(".", LANG === "en" ? "." : ",")} h` : `${Math.round(h)} h`;
 }
 function fmtClock(sec) {
   sec = Math.floor(sec || 0);
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0");
 }
-function fmtAgo(ts, empty = "Nunca") {
-  if (!ts) return empty;
+function fmtAgo(ts, empty) {
+  if (!ts) return empty ?? t("Nunca");
   const d = new Date(ts * 1000), now = new Date();
   const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
-  if (days <= 0) return "Hoje";
-  if (days === 1) return "Ontem";
-  if (days < 7) return `Há ${days} dias`;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  if (days <= 0) return t("Hoje");
+  if (days === 1) return t("Ontem");
+  if (days < 7) return t("Há {n} dias", { n: days });
+  return d.toLocaleDateString(LOCALE(), { day: "2-digit", month: "short", year: "numeric" });
 }
-function fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—"; }
+function fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleDateString(LOCALE(), { day: "2-digit", month: "short", year: "numeric" }) : "—"; }
+function fmtTime(ts) { return new Date(ts * 1000).toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" }); }
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-function platformLabel(g) { return g.platform === "Console" ? "Console" : g.platform; }
-function kindLabel(g) { return g.kind === "recompiled" ? "Recompilado" : "Jogo de PC"; }
+function platformLabel(g) { return g.platform === "Console" ? t("Console") : g.platform; }
+function kindLabel(g) { return g.kind === "recompiled" ? t("Recompilado") : t("Jogo de PC"); }
+function sourceLabel(s) {
+  return {
+    folder: t("Pasta da biblioteca"), manual: t("Adicionado manualmente"), steam: "Steam", epic: "Epic Games",
+    gog: "GOG", ubisoft: "Ubisoft Connect", ea: "EA app", battlenet: "Battle.net", xbox: "Xbox (Game Pass)",
+  }[s] || s;
+}
 function isRunning(id) { return state.running[id] !== undefined; }
 function slug(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"); }
+function gameById(id) { return state.lib.games.find(x => x.id === id); }
 function theme() { return document.documentElement.dataset.theme || "sober"; }
-function applyTheme(t) {
-  t = t === "neon" ? "neon" : "sober";
-  if (document.documentElement.dataset.theme !== t) {
-    document.documentElement.dataset.theme = t;
+function applyTheme(th) {
+  th = THEMES.includes(th) ? th : "sober";
+  if (document.documentElement.dataset.theme !== th) {
+    document.documentElement.dataset.theme = th;
     $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = "";
   }
-  localSet("theme", t);
+  localSet("theme", th);
 }
 function badgesHTML(g) {
   const b = [];
-  if (g.kind === "recompiled") b.push(`<span class="pbadge recomp">RECOMPILADO</span>`);
+  if (g.kind === "recompiled") b.push(`<span class="pbadge recomp">${t("RECOMPILADO")}</span>`);
   b.push(`<span class="pbadge ${slug(g.platform)}">${esc(platformLabel(g)).toUpperCase()}</span>`);
   return b.join("");
 }
@@ -110,6 +128,22 @@ function toast(msg, kind = "") {
   el.textContent = msg;
   $("#toasts").appendChild(el);
   setTimeout(() => el.remove(), kind === "error" ? 6000 : 3000);
+}
+
+// Dica flutuante usada pelos gráficos (elementos com data-tip)
+function bindTooltips() {
+  const tip = $("#tip");
+  document.addEventListener("mousemove", e => {
+    const el = e.target.closest("[data-tip]");
+    if (!el) { tip.hidden = true; return; }
+    tip.innerHTML = el.dataset.tip;
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  });
 }
 
 /* ---------------- Capas ---------------- */
@@ -135,22 +169,18 @@ window.coverError = (img) => {
   box.insertAdjacentHTML("afterbegin", `<span class="ph">${esc(name)}</span>`);
 };
 
-/* ---------------- Filtro / ordenação ---------------- */
-function baseGames() { return state.lib.games; }
+// Fundo dinâmico (temas PlayStation, Xbox e Cyberpunk): a arte do jogo em foco
+let ambientId = null;
+function setAmbient(g) {
+  if (!g || ambientId === g.id) return;
+  ambientId = g.id;
+  const src = g.hero || g.cover;
+  document.documentElement.style.setProperty("--ambient", src ? `url("${src}")` : "none");
+}
 
-function visibleGames() {
-  const q = state.query.trim().toLowerCase();
-  let list = baseGames().filter(g => {
-    if (state.nav !== "all" && g.kind !== state.nav) return false;
-    if (state.col === "hidden") { if (!g.hidden) return false; }
-    else if (g.hidden) return false;
-    if (state.col === "favorites" && !g.favorite) return false;
-    if (state.col === "recent" && !g.last_played) return false;
-    if (q && !(g.name.toLowerCase().includes(q) || (g.platform || "").toLowerCase().includes(q) || (g.title_id || "").toLowerCase().includes(q))) return false;
-    return true;
-  });
-  const sort = state.col === "recent" ? "recent" : state.sort;
-  const byName = (a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+/* ---------------- Filtro / ordenação ---------------- */
+function sortGames(list, sort) {
+  const byName = (a, b) => a.name.localeCompare(b.name, LOCALE(), { sensitivity: "base" });
   const by = {
     name: byName,
     recent: (a, b) => (b.last_played || 0) - (a.last_played || 0) || byName(a, b),
@@ -159,14 +189,35 @@ function visibleGames() {
     platform: (a, b) => (a.platform || "").localeCompare(b.platform || "") || byName(a, b),
     kind: (a, b) => a.kind.localeCompare(b.kind) || byName(a, b),
   };
-  list.sort(by[sort] || byName);
+  return list.sort(by[sort] || byName);
+}
+
+function visibleGames() {
+  const q = state.query.trim().toLowerCase();
+  let list = state.lib.games.filter(g => {
+    if (state.nav !== "all" && g.kind !== state.nav) return false;
+    if (state.col === "hidden") { if (!g.hidden) return false; }
+    else if (g.hidden) return false;
+    if (state.col === "favorites" && !g.favorite) return false;
+    if (state.col === "recent" && !g.last_played) return false;
+    if (q && !(g.name.toLowerCase().includes(q) || (g.platform || "").toLowerCase().includes(q) || (g.title_id || "").toLowerCase().includes(q)
+      || (g.info?.genres || []).some(x => x.toLowerCase().includes(q)))) return false;
+    return true;
+  });
+  sortGames(list, state.col === "recent" ? "recent" : state.sort);
   if (state.sortDesc) list.reverse();
   return list;
 }
 
 /* ---------------- Render ---------------- */
+function navTitle() {
+  const NAV = { all: t("Todos os jogos"), recompiled: t("Recompilados"), normal: t("Jogos de PC") };
+  const COL = { favorites: t("Favoritos"), recent: t("Jogados recentemente"), hidden: t("Ocultos") };
+  return state.col ? COL[state.col] + (state.nav !== "all" ? " · " + NAV[state.nav] : "") : NAV[state.nav];
+}
+
 function render() {
-  const all = baseGames();
+  const all = state.lib.games;
   const shown = all.filter(g => !g.hidden);
   const inNav = g => state.nav === "all" || g.kind === state.nav;
   $("#count-all").textContent = shown.length;
@@ -175,16 +226,18 @@ function render() {
   $("#count-favorites").textContent = shown.filter(g => g.favorite && inNav(g)).length;
   $("#count-recent").textContent = shown.filter(g => g.last_played && inNav(g)).length;
   $("#count-hidden").textContent = all.filter(g => g.hidden && inNav(g)).length;
-  $$(".nav-item[data-nav]").forEach(b => b.classList.toggle("active", b.dataset.nav === state.nav && !state.col));
-  $$(".nav-item[data-col]").forEach(b => b.classList.toggle("active", b.dataset.col === state.col));
+  const lib = state.page === "library";
+  $$(".nav-item[data-nav]").forEach(b => b.classList.toggle("active", lib && b.dataset.nav === state.nav && !state.col));
+  $$(".nav-item[data-col]").forEach(b => b.classList.toggle("active", lib && b.dataset.col === state.col));
+  $$(".nav-item[data-page]").forEach(b => b.classList.toggle("active", b.dataset.page === state.page));
   $$("#view-toggle button").forEach(b => b.classList.toggle("on", b.dataset.view === state.view));
   $("#size").hidden = state.view !== "grid";
 
   const list = visibleGames();
-  const title = state.col ? COL_TITLES[state.col] + (state.nav !== "all" ? " · " + NAV_TITLES[state.nav] : "") : NAV_TITLES[state.nav];
-  $("#view-title").textContent = title;
+  $("#view-title").textContent = navTitle();
   const total = list.reduce((s, g) => s + (g.playtime || 0), 0);
-  $("#view-sub").textContent = `${list.length} ${list.length === 1 ? "jogo" : "jogos"}` + (total >= 60 ? ` · ${fmtPlaytime(total)} jogadas` : "");
+  $("#view-sub").textContent = t(list.length === 1 ? "{n} jogo" : "{n} jogos", { n: list.length })
+    + (total >= 60 ? " · " + t("{t} jogadas", { t: fmtPlaytime(total) }) : "");
 
   $("#grid").hidden = state.view !== "grid" || !list.length;
   $("#list").hidden = state.view !== "list" || !list.length;
@@ -192,7 +245,10 @@ function render() {
   renderEmpty(list);
   renderSpotlight(list);
   renderNowPlaying();
+  if (AMBIENT_THEMES.includes(theme()) && !ambientId) setAmbient(list.find(g => g.last_played) || list[0]);
   if (state.current) renderDetails();
+  if (state.page === "stats") renderStats();
+  if (state.tv) renderTV();
 }
 
 // Destaque "Continue jogando" (só no tema Neon)
@@ -204,8 +260,8 @@ function renderSpotlight(list) {
   const played = pool.filter(g => g.last_played).sort((a, b) => b.last_played - a.last_played);
   const g = pool.find(x => x.id === runningId) || played[0] || pool.find(x => x.hero) || pool[0];
   const running = isRunning(g.id);
-  const eyebrow = running ? "Jogando agora" : (played[0] === g ? "Continue jogando" : "Destaque da biblioteca");
-  const key = [g.id, g.hero, g.cover, running, Math.floor(g.playtime / 60)].join("|");
+  const eyebrow = running ? t("Jogando agora") : (played[0] === g ? t("Continue jogando") : t("Destaque da biblioteca"));
+  const key = [g.id, g.hero, g.cover, running, Math.floor(g.playtime / 60), LANG].join("|");
   el.hidden = false;
   if (el.dataset.key === key) return;
   el.dataset.key = key;
@@ -213,10 +269,10 @@ function renderSpotlight(list) {
   el.innerHTML = `${bg}<div class="sp-content"><div class="sp-text">
       <div class="sp-eyebrow">${eyebrow}</div>
       <div class="sp-title">${esc(g.name)}</div>
-      <div class="sp-sub">${badgesHTML(g)}<span>${fmtPlaytime(g.playtime)}</span><span>Última vez: ${fmtAgo(g.last_played)}</span></div>
+      <div class="sp-sub">${badgesHTML(g)}<span>${fmtPlaytime(g.playtime)}</span><span>${t("Última vez")}: ${fmtAgo(g.last_played)}</span></div>
       <div class="sp-actions">
-        <button class="btn play ${running ? "running" : ""}" data-play="${g.id}">${ICON.play}<span>${running ? "EM EXECUÇÃO" : "JOGAR"}</span></button>
-        <button class="btn" data-open="${g.id}">Ver detalhes</button>
+        <button class="btn play ${running ? "running" : ""}" data-play="${g.id}">${ICON.play}<span>${running ? t("EM EXECUÇÃO") : t("JOGAR")}</span></button>
+        <button class="btn" data-open="${g.id}">${t("Ver detalhes")}</button>
       </div></div></div>`;
 }
 
@@ -229,12 +285,12 @@ function setHTML(el, html) {
 function renderGrid(list) {
   setHTML($("#grid"), list.map(g => {
     const running = isRunning(g.id);
-    const sub = running ? "Jogando agora" : fmtPlaytime(g.playtime);
+    const sub = running ? t("Jogando agora") : fmtPlaytime(g.playtime);
     return `<article class="card ${g.hidden ? "is-hidden" : ""}" tabindex="0" data-id="${g.id}" data-name="${esc(g.name)}">
       ${coverHTML(g)}
         <div class="badge-row"><span class="pbadge ${slug(g.platform)}">${esc(platformLabel(g)).toUpperCase()}</span>${g.favorite ? '<span class="fav-dot">★</span>' : ""}</div>
-        ${running ? `<div class="c-running">Jogando agora</div>` : ""}
-        <button class="c-play" data-play="${g.id}">${running ? "Abrir" : ICON.play + "Jogar"}</button>
+        ${running ? `<div class="c-running">${t("Jogando agora")}</div>` : ""}
+        <button class="c-play" data-play="${g.id}" tabindex="-1">${running ? t("Abrir") : ICON.play + t("Jogar")}</button>
       </div>
       <div class="card-meta">
         <div class="card-title" title="${esc(g.name)}">${g.favorite ? '<span class="fav">★</span>' : ""}${esc(g.name)}</div>
@@ -245,19 +301,19 @@ function renderGrid(list) {
 }
 
 function renderList(list) {
-  const cols = [["name", "Nome"], ["platform", "Plataforma"], ["kind", "Categoria"], ["playtime", "Tempo de jogo"], ["recent", "Última vez"]];
-  const head = `<div class="list-head"><span></span>${cols.map(([k, t]) =>
-    `<button data-sortcol="${k}" class="${state.sort === k ? "on" : ""} ${k === "kind" ? "c-kind" : ""}">${t}${state.sort === k ? (state.sortDesc ? ICON.up : ICON.down) : ""}</button>`).join("")}<span></span></div>`;
+  const cols = [["name", t("Nome")], ["platform", t("Plataforma")], ["kind", t("Categoria")], ["playtime", t("Tempo de jogo")], ["recent", t("Última vez")]];
+  const head = `<div class="list-head"><span></span>${cols.map(([k, label]) =>
+    `<button data-sortcol="${k}" tabindex="-1" class="${state.sort === k ? "on" : ""} ${k === "kind" ? "c-kind" : ""}">${label}${state.sort === k ? (state.sortDesc ? ICON.up : ICON.down) : ""}</button>`).join("")}<span></span></div>`;
   const rows = list.map(g => {
     const running = isRunning(g.id);
-    return `<div class="row ${g.hidden ? "is-hidden" : ""}" data-id="${g.id}" data-name="${esc(g.name)}">
+    return `<div class="row ${g.hidden ? "is-hidden" : ""}" tabindex="0" data-id="${g.id}" data-name="${esc(g.name)}">
       <div class="thumb">${g.cover ? `<img src="${g.cover}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>
       <div class="r-name" title="${esc(g.name)}">${g.favorite ? '<span class="fav">★</span>' : ""}${esc(g.name)}</div>
       <div class="r-cell">${esc(platformLabel(g))}</div>
       <div class="r-cell c-kind">${kindLabel(g)}</div>
-      <div class="r-cell">${running ? '<span class="r-live">Jogando agora</span>' : fmtPlaytime(g.playtime, "—")}</div>
+      <div class="r-cell">${running ? `<span class="r-live">${t("Jogando agora")}</span>` : fmtPlaytime(g.playtime, "—")}</div>
       <div class="r-cell">${fmtAgo(g.last_played, "—")}</div>
-      <button class="r-play" data-play="${g.id}">${running ? "Abrir" : ICON.play + "Jogar"}</button>
+      <button class="r-play" data-play="${g.id}" tabindex="-1">${running ? t("Abrir") : ICON.play + t("Jogar")}</button>
     </div>`;
   }).join("");
   setHTML($("#list"), head + rows);
@@ -268,17 +324,17 @@ function renderEmpty(list) {
   if (list.length) { el.hidden = true; return; }
   el.hidden = false;
   if (!state.lib.games.length && !state.scanning) {
-    el.innerHTML = `<div class="empty-box"><h2>Sua biblioteca está vazia</h2>
-      <p>Adicione a pasta onde ficam seus jogos recompilados ou seus jogos de PC. Cada jogo é reconhecido automaticamente.</p>
-      <div class="row-btns"><button class="btn primary" data-act="add-folder">Adicionar pasta de jogos</button><button class="btn" data-act="add-exe">Adicionar pelo executável</button></div></div>`;
+    el.innerHTML = `<div class="empty-box"><h2>${t("Sua biblioteca está vazia")}</h2>
+      <p>${t("Adicione a pasta onde ficam seus jogos recompilados ou seus jogos de PC. Cada jogo é reconhecido automaticamente.")}</p>
+      <div class="row-btns"><button class="btn primary" data-act="add-folder">${t("Adicionar pasta de jogos")}</button><button class="btn" data-act="add-exe">${t("Adicionar pelo executável")}</button></div></div>`;
   } else {
-    const msg = state.query ? `Nenhum jogo encontrado para “${esc(state.query)}”.`
-      : state.col === "favorites" ? "Nenhum favorito ainda. Abra um jogo e clique na estrela."
-      : state.col === "recent" ? "Nenhum jogo jogado ainda."
-      : state.col === "hidden" ? "Nenhum jogo oculto."
-      : state.nav === "recompiled" ? "Nenhum jogo recompilado. Adicione a pasta dos seus ports."
-      : state.nav === "normal" ? "Nenhum jogo de PC. Adicione uma pasta de jogos ou ative a importação da Steam/Epic nas configurações."
-      : "Nada por aqui.";
+    const msg = state.query ? t("Nenhum jogo encontrado para “{q}”.", { q: esc(state.query) })
+      : state.col === "favorites" ? t("Nenhum favorito ainda. Abra um jogo e clique na estrela.")
+      : state.col === "recent" ? t("Nenhum jogo jogado ainda.")
+      : state.col === "hidden" ? t("Nenhum jogo oculto.")
+      : state.nav === "recompiled" ? t("Nenhum jogo recompilado. Adicione a pasta dos seus ports.")
+      : state.nav === "normal" ? t("Nenhum jogo de PC. Adicione uma pasta de jogos ou ative a importação das lojas nas configurações.")
+      : t("Nada por aqui.");
     el.innerHTML = `<div class="empty-box"><p>${msg}</p></div>`;
   }
 }
@@ -286,29 +342,71 @@ function renderEmpty(list) {
 function renderNowPlaying() {
   const el = $("#now-playing");
   const id = Object.keys(state.running)[0];
-  const g = id && state.lib.games.find(x => x.id === id);
+  const g = id && gameById(id);
   if (!g) { el.hidden = true; return; }
   el.hidden = false;
   el.dataset.open = g.id;
-  el.innerHTML = `<div class="np-label">Jogando agora</div><div class="np-name">${esc(g.name)}</div><div class="np-time">${fmtClock(state.running[id])}</div>`;
+  el.innerHTML = `<div class="np-label">${t("Jogando agora")}</div><div class="np-name">${esc(g.name)}</div><div class="np-time">${fmtClock(state.running[id])}</div>`;
+}
+
+/* ---------------- Páginas ---------------- */
+function showPage(page) {
+  state.page = page;
+  state.current = null;
+  $("#details").hidden = true;
+  $("#library-view").hidden = page !== "library";
+  $("#stats-view").hidden = page !== "stats";
+  render();
 }
 
 /* ---------------- Detalhes ---------------- */
 function openDetails(id) {
   state.current = id;
   $("#library-view").hidden = true;
+  $("#stats-view").hidden = true;
   $("#details").hidden = false;
   $("#details").scrollTop = 0;
   renderDetails(true);
+  const g = gameById(id);
+  if (g) setAmbient(g);
 }
 function closeDetails() {
   state.current = null;
   $("#details").hidden = true;
-  $("#library-view").hidden = false;
+  $("#library-view").hidden = state.page !== "library";
+  $("#stats-view").hidden = state.page !== "stats";
+}
+
+function infoHTML(g) {
+  const i = g.info;
+  if (!i) return `<p class="hint">${t("Buscando descrição, gênero e nota… (precisa de internet)")}</p>`;
+  const meta = i.metacritic ? `<a class="meta-score ${i.metacritic >= 75 ? "good" : i.metacritic >= 50 ? "mid" : "bad"}" ${i.metacritic_url ? `data-url="${esc(i.metacritic_url)}"` : ""} title="Metacritic">${i.metacritic}</a>` : "";
+  const rows = [];
+  if (i.developers?.length) rows.push([t("Desenvolvedora"), i.developers.join(", ")]);
+  if (i.publishers?.length) rows.push([t("Publicadora"), i.publishers.join(", ")]);
+  if (i.release || i.year) rows.push([t("Lançamento"), i.release || String(i.year)]);
+  return `
+    ${i.genres?.length ? `<div class="genres">${i.genres.map(x => `<span class="genre">${esc(x)}</span>`).join("")}</div>` : ""}
+    ${i.description ? `<p class="desc">${esc(i.description)}</p>` : ""}
+    <div class="info-row">
+      ${meta ? `<div class="meta-box">${meta}<span>Metacritic</span></div>` : ""}
+      <dl class="info-dl">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    </div>
+    <div class="info-src">${t("Fonte")}: ${esc(i.source || "")}${i.wiki_url ? ` · <a data-url="${esc(i.wiki_url)}">${t("Ler mais")}</a>` : ""}</div>`;
+}
+
+function sessionsHTML(g) {
+  const hist = [...(g.history || [])].reverse();
+  const live = isRunning(g.id);
+  if (!hist.length && !live) return `<p class="hint">${t("Nenhuma sessão registrada ainda. O histórico é gravado a cada vez que você joga.")}</p>`;
+  const rows = [];
+  if (live) rows.push(`<div class="sess live"><span>${t("Agora")}</span><span>${fmtTime(Date.now() / 1000 - state.running[g.id])} – …</span><b>${fmtClock(state.running[g.id])}</b></div>`);
+  hist.slice(0, 12).forEach(s => rows.push(`<div class="sess"><span>${fmtDate(s.s)}</span><span>${fmtTime(s.s)} – ${fmtTime(s.e)}</span><b>${fmtPlaytime(s.e - s.s)}</b></div>`));
+  return `<div class="sess-list">${rows.join("")}</div>${hist.length > 12 ? `<p class="hint" style="margin-top:8px">${t("Mostrando as 12 mais recentes de {n} sessões.", { n: hist.length })}</p>` : ""}`;
 }
 
 function renderDetails(full = false) {
-  const g = state.lib.games.find(x => x.id === state.current);
+  const g = gameById(state.current);
   if (!g) { closeDetails(); return; }
   const running = isRunning(g.id);
   const heroImg = $("#d-hero");
@@ -322,59 +420,193 @@ function renderDetails(full = false) {
     $("#d-cover").dataset.name = g.name;
   }
   $("#d-title").textContent = g.name;
-  const sub = [kindLabel(g), platformLabel(g), g.title_id, g.version ? "v" + g.version : null].filter(Boolean);
-  $("#d-sub").innerHTML = theme() === "neon" ? badgesHTML(g) + (g.title_id ? `<span class="pbadge">${esc(g.title_id)}</span>` : "") + (g.version ? `<span class="pbadge">v${esc(g.version)}</span>` : "") : esc(sub.join("  ·  "));
+  const sub = [kindLabel(g), platformLabel(g), g.title_id, g.version ? "v" + g.version : null, g.info?.year].filter(Boolean);
+  $("#d-sub").innerHTML = ["neon", "cyberpunk"].includes(theme())
+    ? badgesHTML(g) + (g.title_id ? `<span class="pbadge">${esc(g.title_id)}</span>` : "") + (g.version ? `<span class="pbadge">v${esc(g.version)}</span>` : "")
+    : esc(sub.join("  ·  "));
 
   const play = $("#d-play");
   play.classList.toggle("running", running);
-  play.innerHTML = running ? `${ICON.stop}<span>Fechar jogo</span>` : `${ICON.play}<span>Jogar</span>`;
+  play.innerHTML = running ? `${ICON.stop}<span>${t("Fechar jogo")}</span>` : `${ICON.play}<span>${t("Jogar")}</span>`;
   $("#d-alt").hidden = !g.alt_exe;
   $("#d-fav").classList.toggle("on", g.favorite);
-  $("#d-fav").title = g.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos";
+  $("#d-fav").title = g.favorite ? t("Remover dos favoritos") : t("Adicionar aos favoritos");
 
   $("#d-quick").innerHTML = `
-    <div><small>Tempo de jogo</small><b>${fmtPlaytime(g.playtime, "0 min")}</b></div>
-    <div><small>${running ? "Sessão atual" : "Última vez"}</small><b class="${running ? "live" : ""}">${running ? fmtClock(state.running[g.id]) : fmtAgo(g.last_played)}</b></div>`;
+    <div><small>${t("Tempo de jogo")}</small><b>${fmtPlaytime(g.playtime, "0 min")}</b></div>
+    <div><small>${running ? t("Sessão atual") : t("Última vez")}</small><b class="${running ? "live" : ""}">${running ? fmtClock(state.running[g.id]) : fmtAgo(g.last_played)}</b></div>`;
+
+  const infoKey = JSON.stringify(g.info || null) + LANG;
+  if (full || $("#d-info")._key !== infoKey) { $("#d-info").innerHTML = infoHTML(g); $("#d-info")._key = infoKey; }
+  const sessKey = (g.history || []).length + "|" + running + "|" + (running ? Math.floor(state.running[g.id] / 5) : "") + LANG;
+  if (full || $("#d-sessions")._key !== sessKey) { $("#d-sessions").innerHTML = sessionsHTML(g); $("#d-sessions")._key = sessKey; }
 
   const rows = [
-    ["Categoria", g.kind === "recompiled" ? "Jogo recompilado (port nativo para Windows)" : "Jogo de PC"],
-    ["Plataforma", platformLabel(g) + (g.title_id ? ` (${g.title_id})` : "")],
-    ["Tempo de jogo", fmtPlaytime(g.playtime, "Nunca jogado")],
-    ["Última vez jogado", g.last_played ? new Date(g.last_played * 1000).toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" }) : "Nunca"],
-    ["Sessões", String(g.sessions || 0)],
-    ["Adicionado em", fmtDate(g.added)],
-    ["Origem", { folder: "Pasta da biblioteca", manual: "Adicionado manualmente", steam: "Steam", epic: "Epic Games" }[g.source] || g.source],
-    ["Pasta", g.root],
+    [t("Categoria"), g.kind === "recompiled" ? t("Jogo recompilado (port nativo para Windows)") : t("Jogo de PC")],
+    [t("Plataforma"), platformLabel(g) + (g.title_id ? ` (${g.title_id})` : "")],
+    [t("Tempo de jogo"), fmtPlaytime(g.playtime)],
+    [t("Última vez jogado"), g.last_played ? new Date(g.last_played * 1000).toLocaleString(LOCALE(), { dateStyle: "long", timeStyle: "short" }) : t("Nunca")],
+    [t("Sessões"), String(g.sessions || 0)],
+    [t("Adicionado em"), fmtDate(g.added)],
+    [t("Origem"), sourceLabel(g.source)],
+    [t("Pasta"), g.root],
   ];
-  if (g.exe) rows.push(["Executável", g.exe]);
-  else if (g.launch_uri) rows.push(["Inicia por", g.source === "steam" ? "Steam" : "Epic Games Launcher"]);
-  else rows.push(["Executável", "!Nenhum executável encontrado nessa pasta. Use o botão Editar para escolher o .exe."]);
-  if (g.alt_exe) rows.push(["Launcher do port", g.alt_exe]);
-  if (g.args) rows.push(["Argumentos", g.args]);
-  if (g.art_source && !g.cover_custom) rows.push(["Capa", g.art_source]);
+  if (g.exe) rows.push([t("Executável"), g.exe]);
+  else if (g.launch_uri) rows.push([t("Inicia por"), sourceLabel(g.source)]);
+  else rows.push([t("Executável"), "!" + t("Nenhum executável encontrado nessa pasta. Use o botão Editar para escolher o .exe.")]);
+  if (g.alt_exe) rows.push([t("Launcher do port"), g.alt_exe]);
+  if (g.args) rows.push([t("Argumentos"), g.args]);
+  if (g.art_source && !g.cover_custom) rows.push([t("Capa"), g.art_source]);
   $("#d-meta").innerHTML = rows.map(([k, v]) => String(v).startsWith("!")
     ? `<dt>${k}</dt><dd class="warn">${esc(v.slice(1))}</dd>` : `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
 }
 
+/* ---------------- Estatísticas ---------------- */
+function allSessions() {
+  const out = [];
+  for (const g of state.lib.games) for (const s of g.history || []) out.push({ g, s: s.s, e: s.e });
+  const now = Date.now() / 1000;
+  for (const [id, sec] of Object.entries(state.running)) {
+    const g = gameById(id);
+    if (g) out.push({ g, s: now - sec, e: now, live: true });
+  }
+  return out.sort((a, b) => b.s - a.s);
+}
+
+// Soma os segundos jogados em cada dia (dividindo sessões que passam da meia-noite)
+function secondsPerDay(sessions, days) {
+  const res = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const a = d.getTime() / 1000, b = a + 86400;
+    let sum = 0;
+    for (const s of sessions) sum += Math.max(0, Math.min(b, s.e) - Math.max(a, s.s));
+    res.push({ day: d, sec: sum });
+  }
+  return res;
+}
+
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const steps = [0.5, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24];
+  return steps.find(x => x >= v) || Math.ceil(v);
+}
+
+function barChartHTML(days) {
+  const maxH = niceMax(Math.max(...days.map(d => d.sec / 3600)));
+  const ticks = [maxH, maxH / 2, 0];
+  const fmtTick = h => h === 0 ? "0" : (h < 1 ? `${Math.round(h * 60)}m` : `${+h.toFixed(1)}h`);
+  const bars = days.map((d, i) => {
+    const h = d.sec / 3600;
+    const pct = Math.min(100, (h / maxH) * 100);
+    const label = d.day.toLocaleDateString(LOCALE(), { weekday: "short", day: "2-digit", month: "short" });
+    const showX = i === 0 || i === days.length - 1 || d.day.getDate() === 1 || i % 7 === (days.length - 1) % 7;
+    return `<div class="bar-col" data-tip="<b>${esc(label)}</b><br>${d.sec ? fmtPlaytime(d.sec) : t("Sem jogo")}">
+      <div class="bar" style="height:${pct}%"></div>
+      <span class="bar-x">${showX ? d.day.toLocaleDateString(LOCALE(), { day: "2-digit", month: "2-digit" }) : ""}</span></div>`;
+  }).join("");
+  return `<div class="chart">
+    <div class="chart-y">${ticks.map(v => `<span>${fmtTick(v)}</span>`).join("")}</div>
+    <div class="chart-plot"><div class="chart-grid"><i></i><i></i><i></i></div><div class="bars">${bars}</div></div>
+  </div>`;
+}
+
+function hbarsHTML(items, withThumb) {
+  const max = Math.max(...items.map(x => x.value), 1);
+  return `<div class="hbars">${items.map(x => `
+    <div class="hbar" ${x.id ? `data-open="${x.id}"` : ""} data-tip="<b>${esc(x.label)}</b><br>${fmtPlaytime(x.value)}">
+      ${withThumb ? `<div class="hb-thumb">${x.cover ? `<img src="${x.cover}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>` : ""}
+      <div class="hb-main"><div class="hb-top"><span class="hb-label">${esc(x.label)}</span><span class="hb-val">${fmtHours(x.value)}</span></div>
+      <div class="hb-track"><div class="hb-fill" style="width:${Math.max(1.5, (x.value / max) * 100)}%"></div></div></div>
+    </div>`).join("")}</div>`;
+}
+
+function renderStats() {
+  const el = $("#stats-body");
+  const games = state.lib.games;
+  const sessions = allSessions();
+  const total = games.reduce((s, g) => s + (g.playtime || 0), 0);
+  const played = games.filter(g => g.playtime > 0).length;
+  const sessCount = games.reduce((s, g) => s + (g.sessions || 0), 0);
+  const durations = sessions.map(s => s.e - s.s);
+  const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const days30 = secondsPerDay(sessions, 30);
+  const week = days30.slice(-7).reduce((s, d) => s + d.sec, 0);
+  const month = days30.reduce((s, d) => s + d.sec, 0);
+  const top = games.filter(g => g.playtime > 0).sort((a, b) => b.playtime - a.playtime).slice(0, 10)
+    .map(g => ({ id: g.id, label: g.name, value: g.playtime, cover: g.cover }));
+  const plat = {};
+  games.forEach(g => { if (g.playtime > 0) plat[platformLabel(g)] = (plat[platformLabel(g)] || 0) + g.playtime; });
+  const platItems = Object.entries(plat).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  const kinds = [[t("Recompilados"), games.filter(g => g.kind === "recompiled")], [t("Jogos de PC"), games.filter(g => g.kind === "normal")]]
+    .map(([label, gs]) => ({ label, value: gs.reduce((s, g) => s + (g.playtime || 0), 0) })).filter(x => x.value > 0);
+
+  const key = JSON.stringify([total, sessions.length, Math.floor(Date.now() / 60000), LANG, games.length]);
+  if (el._key === key) return;
+  el._key = key;
+
+  const kpi = (label, value, sub = "") => `<div class="kpi"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
+  const hasHistory = sessions.length > 0;
+  el.innerHTML = `
+    <div class="kpis">
+      ${kpi(t("Tempo total"), fmtHours(total), t("{n} jogos jogados", { n: played }))}
+      ${kpi(t("Últimos 7 dias"), fmtHours(week), hasHistory ? t("{t} nos últimos 30 dias", { t: fmtHours(month) }) : "")}
+      ${kpi(t("Sessões"), String(sessCount), avg ? t("média de {t}", { t: fmtPlaytime(avg) }) : "")}
+      ${kpi(t("Jogos na biblioteca"), String(games.length), t("{a} recompilados · {b} de PC", { a: games.filter(g => g.kind === "recompiled").length, b: games.filter(g => g.kind === "normal").length }))}
+    </div>
+    <section class="panel">
+      <header><h3>${t("Tempo jogado por dia")}</h3><span>${t("últimos 30 dias")}</span></header>
+      ${hasHistory ? barChartHTML(days30) : `<p class="hint">${t("O gráfico aparece depois das primeiras sessões. A partir desta versão, cada vez que você joga fica registrada.")}</p>`}
+    </section>
+    <div class="panels-2">
+      <section class="panel">
+        <header><h3>${t("Mais jogados")}</h3><span>${t("tempo total")}</span></header>
+        ${top.length ? hbarsHTML(top, true) : `<p class="hint">${t("Nenhum jogo com tempo de jogo ainda.")}</p>`}
+      </section>
+      <div class="panel-stack">
+        <section class="panel">
+          <header><h3>${t("Por plataforma")}</h3></header>
+          ${platItems.length ? hbarsHTML(platItems, false) : `<p class="hint">—</p>`}
+        </section>
+        <section class="panel">
+          <header><h3>${t("Por categoria")}</h3></header>
+          ${kinds.length ? hbarsHTML(kinds, false) : `<p class="hint">—</p>`}
+        </section>
+      </div>
+    </div>
+    <section class="panel">
+      <header><h3>${t("Sessões recentes")}</h3></header>
+      ${hasHistory ? `<div class="sess-table">${sessions.slice(0, 20).map(s => `
+        <div class="sess-row ${s.live ? "live" : ""}" data-open="${s.g.id}">
+          <div class="thumb">${s.g.cover ? `<img src="${s.g.cover}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>
+          <span class="sr-name">${esc(s.g.name)}</span>
+          <span>${s.live ? t("Agora") : fmtDate(s.s)}</span>
+          <span>${fmtTime(s.s)} – ${s.live ? "…" : fmtTime(s.e)}</span>
+          <b>${fmtPlaytime(s.e - s.s)}</b>
+        </div>`).join("")}</div>` : `<p class="hint">${t("Nenhuma sessão registrada ainda.")}</p>`}
+    </section>`;
+}
+
 /* ---------------- Ações ---------------- */
 async function playGame(id) {
-  const g = state.lib.games.find(x => x.id === id);
+  const g = gameById(id);
   if (!g) return;
-  if (isRunning(id)) { openDetails(id); return; }
+  if (isRunning(id)) { if (!state.tv) openDetails(id); return; }
   const res = await api("launch", id, false);
-  if (res && res.ok) toast(`Iniciando ${g.name}…`, "ok");
-  else toast(res?.error || "Não foi possível iniciar o jogo.", "error");
+  if (res && res.ok) toast(t("Iniciando {name}…", { name: g.name }), "ok");
+  else toast(res?.error || t("Não foi possível iniciar o jogo."), "error");
 }
 
 async function stopGame(id) {
-  const g = state.lib.games.find(x => x.id === id);
-  if (!g || !confirm(`Fechar ${g.name}? O progresso que não foi salvo será perdido.`)) return;
+  const g = gameById(id);
+  if (!g || !confirm(t("Fechar {name}? O progresso que não foi salvo será perdido.", { name: g.name }))) return;
   await api("stop_game", id);
-  toast("Fechando o jogo…");
+  toast(t("Fechando o jogo…"));
 }
 
 async function toggleFav(id) {
-  const g = state.lib.games.find(x => x.id === id);
+  const g = gameById(id);
   if (!g) return;
   g.favorite = !g.favorite;
   await api("update_game", id, { favorite: g.favorite });
@@ -382,17 +614,18 @@ async function toggleFav(id) {
 }
 
 /* ---------------- Modais ---------------- */
-function openModal(title, body, foot = "", wide = false) {
+function openModal(title, body, foot = "", wide = false, key = null) {
   const card = $(".modal-card");
-  const reopen = !$("#modal").hidden && card.dataset.key === title;
+  key = key || title;
+  const reopen = !$("#modal").hidden && card.dataset.key === key;
   $("#modal-title").textContent = title;
   $("#modal-body").innerHTML = body;
   $("#modal-foot").innerHTML = foot;
   card.classList.toggle("wide", wide);
   if (!reopen) {
     // cada janela lembra o tamanho que o usuário deixou
-    card.dataset.key = title;
-    const saved = (() => { try { return JSON.parse(localGet("modal:" + title, "null")); } catch { return null; } })();
+    card.dataset.key = key;
+    const saved = (() => { try { return JSON.parse(localGet("modal:" + key, "null")); } catch { return null; } })();
     card.style.width = saved ? saved.w + "px" : "";
     card.style.height = saved ? saved.h + "px" : "";
   }
@@ -428,137 +661,182 @@ function bindModalResize() {
 }
 function closeModal() { $("#modal").hidden = true; $("#modal-body").innerHTML = ""; $("#modal-body").onclick = null; $("#modal-body").onchange = null; }
 
-const KIND_OPTS = [
-  ["auto", "Automático", "Separa sozinho os ports recompilados dos jogos de PC"],
-  ["recompiled", "Recompilados", "Todos os jogos da pasta vão para Recompilados"],
-  ["normal", "Jogos de PC", "Todos os jogos da pasta vão para Jogos de PC"],
-];
+function kindOpts() {
+  return [
+    ["auto", t("Automático"), t("Separa sozinho os ports recompilados dos jogos de PC")],
+    ["recompiled", t("Recompilados"), t("Todos os jogos da pasta vão para Recompilados")],
+    ["normal", t("Jogos de PC"), t("Todos os jogos da pasta vão para Jogos de PC")],
+  ];
+}
 
 async function addFolderFlow() {
   const path = await api("pick_folder");
   if (!path) return;
   const def = state.nav === "all" ? "auto" : state.nav;
-  openModal("Adicionar pasta de jogos",
-    `<div class="group-title">Pasta</div><div class="path">${esc(path)}</div>
-     <div class="group-title">Categoria dos jogos</div>
-     <div class="radio-list">${KIND_OPTS.map(([v, t, d]) => `<label class="radio"><input type="radio" name="kind" value="${v}" ${v === def ? "checked" : ""}><span>${t}<small>${d}</small></span></label>`).join("")}</div>
-     <p class="hint" style="margin:14px 0 0">Pode ser uma pasta com vários jogos (cada subpasta vira um jogo) ou a pasta de um jogo só. Nenhum arquivo da pasta é alterado.</p>`,
-    `<button class="btn" data-close>Cancelar</button><button class="btn primary" id="confirm-folder">Adicionar</button>`);
+  openModal(t("Adicionar pasta de jogos"),
+    `<div class="group-title">${t("Pasta")}</div><div class="path">${esc(path)}</div>
+     <div class="group-title">${t("Categoria dos jogos")}</div>
+     <div class="radio-list">${kindOpts().map(([v, label, d]) => `<label class="radio"><input type="radio" name="kind" value="${v}" ${v === def ? "checked" : ""}><span>${label}<small>${d}</small></span></label>`).join("")}</div>
+     <p class="hint" style="margin:14px 0 0">${t("Pode ser uma pasta com vários jogos (cada subpasta vira um jogo) ou a pasta de um jogo só. Nenhum arquivo da pasta é alterado.")}</p>`,
+    `<button class="btn" data-close>${t("Cancelar")}</button><button class="btn primary" id="confirm-folder">${t("Adicionar")}</button>`, false, "add-folder");
   $("#confirm-folder").onclick = async () => {
     const mode = $('input[name="kind"]:checked').value;
     const r = await api("add_folder", path, mode);
     closeModal();
-    if (r.ok) toast("Pasta adicionada. Procurando jogos…", "ok"); else toast(r.error, "error");
+    if (r.ok) toast(t("Pasta adicionada. Procurando jogos…"), "ok"); else toast(r.error, "error");
   };
 }
 
 async function addExeFlow() {
   const kind = state.nav === "all" ? "auto" : state.nav;
   const id = await api("add_game_exe", kind);
-  if (id) { toast("Jogo adicionado.", "ok"); await reload(); openDetails(id); }
+  if (id) { toast(t("Jogo adicionado."), "ok"); await reload(); openDetails(id); }
+}
+
+function themeOptions() {
+  return [
+    ["sober", t("Sóbrio"), t("Cinzas neutros, visual de launcher de desktop")],
+    ["neon", "Neon", t("Roxo e ciano com destaque “Continue jogando”")],
+    ["cyberpunk", "Cyberpunk", t("Amarelo neon, cantos cortados, scanlines e falhas de glitch")],
+    ["nintendo", "Nintendo", t("Tema claro, peças arredondadas e blocos quadrados como no Switch")],
+    ["playstation", "PlayStation", t("Barra no topo, blocos quadrados e fundo que muda com o jogo em foco")],
+    ["xbox", "Xbox", t("Barra de ícones lateral, blocos quadrados e destaques em verde")],
+  ];
 }
 
 function settingsModal() {
   const s = state.lib.settings;
   const folders = state.lib.folders;
-  const chk = (key, title, desc) => `<label class="check"><input type="checkbox" data-set="${key}" ${s[key] ? "checked" : ""}><span>${title}<small>${desc}</small></span></label>`;
-  openModal("Configurações", `
-    <div class="group-title">Pastas de jogos</div>
-    <div class="folder-list">${folders.length ? folders.map(f => `
-      <div class="folder-item"><span class="fp" title="${esc(f.path)}">${esc(f.path)}</span>
-        <select class="select" data-fmode="${esc(f.path)}">${KIND_OPTS.map(([v, t]) => `<option value="${v}" ${f.mode === v ? "selected" : ""}>${t}</option>`).join("")}</select>
-        <button class="btn" data-frm="${esc(f.path)}">Remover</button></div>`).join("")
-      : `<div class="folder-empty">Nenhuma pasta adicionada.</div>`}</div>
-    <button class="btn" data-act="add-folder">Adicionar pasta…</button>
+  const chk = (key, title, desc = "") => `<label class="check"><input type="checkbox" data-set="${key}" ${s[key] ? "checked" : ""}><span>${title}${desc ? `<small>${desc}</small>` : ""}</span></label>`;
+  openModal(t("Configurações"), `
+    <div class="group-title">${t("Idioma")}</div>
+    <select class="select input" id="set-lang" style="max-width:280px">
+      <option value="auto" ${(s.language || "auto") === "auto" ? "selected" : ""}>${t("Automático (idioma do Windows)")}</option>
+      <option value="pt" ${s.language === "pt" ? "selected" : ""}>Português (Brasil)</option>
+      <option value="en" ${s.language === "en" ? "selected" : ""}>English</option>
+      <option value="es" ${s.language === "es" ? "selected" : ""}>Español</option>
+    </select>
 
     <div class="sep"></div>
-    <div class="group-title">Atualizações</div>
-    <p class="hint" style="margin-bottom:8px">Versão instalada: <b style="color:var(--text)">${esc(state.update?.current || "")}</b>${state.update?.mode === "portable" ? " (portable)" : ""}</p>
-    <div class="upd-row"><span id="upd-status" class="upd-status"></span>
-      <button class="btn" id="upd-check">Procurar atualizações</button>
-      <button class="btn primary" id="upd-install" hidden>Atualizar</button></div>
-    <pre class="upd-notes" id="upd-notes" hidden></pre>
-    ${chk("check_updates", "Verificar atualizações automaticamente", "Ao abrir o app e a cada 6 horas, consulta as versões publicadas no GitHub")}
-    ${chk("auto_update", "Baixar atualizações automaticamente", "A versão nova é baixada em segundo plano; você só confirma para reiniciar e instalar")}
-
-    <div class="sep"></div>
-    <div class="group-title">Aparência</div>
-    <div class="theme-pick">
-      <label class="theme-opt"><input type="radio" name="theme" value="sober" ${theme() === "sober" ? "checked" : ""}><span class="swatch sober"><i></i><i></i><i></i></span><span><b>Sóbrio</b><small>Cinzas neutros, visual de launcher de desktop</small></span></label>
-      <label class="theme-opt"><input type="radio" name="theme" value="neon" ${theme() === "neon" ? "checked" : ""}><span class="swatch neon"><i></i><i></i><i></i></span><span><b>Neon</b><small>Roxo e ciano com destaque “Continue jogando”, como a primeira versão</small></span></label>
+    <div class="group-title">${t("Aparência")}</div>
+    <div class="theme-pick">${themeOptions().map(([v, label, d]) => `
+      <label class="theme-opt"><input type="radio" name="theme" value="${v}" ${theme() === v ? "checked" : ""}>
+        <span class="tprev tprev-${v}"><i class="tp-side"></i><i class="tp-a"></i><i class="tp-b"></i><i class="tp-c"></i></span>
+        <span><b>${label}</b><small>${d}</small></span></label>`).join("")}
     </div>
 
     <div class="sep"></div>
-    <div class="group-title">Janela</div>
-    ${chk("close_to_tray", "Ao fechar, minimizar para a bandeja do sistema", "O LZ Launcher continua rodando perto do relógio e segue contando o tempo de jogo. Para sair de vez, use “Sair” no ícone da bandeja.")}
-    ${chk("minimize_on_launch", "Minimizar ao iniciar um jogo", "")}
+    <div class="group-title">${t("Pastas de jogos")}</div>
+    <div class="folder-list">${folders.length ? folders.map(f => `
+      <div class="folder-item"><span class="fp" title="${esc(f.path)}">${esc(f.path)}</span>
+        <select class="select" data-fmode="${esc(f.path)}">${kindOpts().map(([v, label]) => `<option value="${v}" ${f.mode === v ? "selected" : ""}>${label}</option>`).join("")}</select>
+        <button class="btn" data-frm="${esc(f.path)}">${t("Remover")}</button></div>`).join("")
+      : `<div class="folder-empty">${t("Nenhuma pasta adicionada.")}</div>`}</div>
+    <button class="btn" data-act="add-folder">${t("Adicionar pasta…")}</button>
 
     <div class="sep"></div>
-    <div class="group-title">Biblioteca</div>
-    ${chk("import_steam", "Importar jogos instalados pela Steam", "Inclui o tempo de jogo registrado na Steam")}
-    ${chk("import_epic", "Importar jogos instalados pela Epic Games", "")}
-    ${chk("track_external", "Contar tempo de jogos abertos fora do LZ Launcher", "Funciona enquanto o LZ Launcher estiver aberto ou na bandeja")}
+    <div class="group-title">${t("Lojas")}</div>
+    <p class="hint">${t("Jogos instalados por estas lojas aparecem sozinhos em Jogos de PC.")}</p>
+    <div class="check-grid">
+      ${chk("import_steam", "Steam", t("Inclui o tempo de jogo registrado na Steam"))}
+      ${chk("import_epic", "Epic Games")}
+      ${chk("import_gog", "GOG Galaxy")}
+      ${chk("import_ubisoft", "Ubisoft Connect")}
+      ${chk("import_ea", "EA app")}
+      ${chk("import_battlenet", "Battle.net")}
+      ${chk("import_xbox", "Xbox / Game Pass", t("Jogos instalados nas pastas XboxGames"))}
+    </div>
 
     <div class="sep"></div>
-    <div class="group-title">Capas</div>
-    ${chk("online_art", "Buscar capas na internet", "Steam, Wikipédia e SteamGridDB. A arte do próprio jogo é usada quando existe")}
-    <label class="field" style="margin-top:8px"><span>Chave da API do SteamGridDB (opcional)</span>
-      <input class="input" id="sgdb" type="password" value="${esc(s.steamgriddb_key || "")}" placeholder="Cole a chave aqui">
-      <small>Capas verticais em alta qualidade para quase qualquer jogo. Gere grátis em steamgriddb.com → Preferências → API.</small></label>
+    <div class="group-title">${t("Controle e Modo TV")}</div>
+    ${chk("tv_on_start", t("Abrir no Modo TV"), t("O app já abre em tela cheia, pronto para usar com controle"))}
+    <p class="hint">${t("Com um controle conectado: direcional ou analógico para navegar, A para abrir/jogar, B para voltar, X para favoritar, LB/RB para trocar de aba e Menu (☰) para entrar ou sair do Modo TV.")}</p>
+
+    <div class="sep"></div>
+    <div class="group-title">${t("Atualizações")}</div>
+    <p class="hint" style="margin-bottom:8px">${t("Versão instalada")}: <b style="color:var(--text)">${esc(state.update?.current || "")}</b>${state.update?.mode === "portable" ? " (portable)" : ""}</p>
+    <div class="upd-row"><span id="upd-status" class="upd-status"></span>
+      <button class="btn" id="upd-check">${t("Procurar atualizações")}</button>
+      <button class="btn primary" id="upd-install" hidden>${t("Atualizar")}</button></div>
+    <pre class="upd-notes" id="upd-notes" hidden></pre>
+    ${chk("check_updates", t("Verificar atualizações automaticamente"), t("Ao abrir o app e a cada 6 horas, consulta as versões publicadas no GitHub"))}
+    ${chk("auto_update", t("Baixar atualizações automaticamente"), t("A versão nova é baixada em segundo plano; você só confirma para reiniciar e instalar"))}
+
+    <div class="sep"></div>
+    <div class="group-title">${t("Janela")}</div>
+    ${chk("close_to_tray", t("Ao fechar, minimizar para a bandeja do sistema"), t("O LZ Launcher continua rodando perto do relógio e segue contando o tempo de jogo. Para sair de vez, use “Sair” no ícone da bandeja."))}
+    ${chk("minimize_on_launch", t("Minimizar ao iniciar um jogo"))}
+    ${chk("track_external", t("Contar tempo de jogos abertos fora do LZ Launcher"), t("Funciona enquanto o LZ Launcher estiver aberto ou na bandeja"))}
+
+    <div class="sep"></div>
+    <div class="group-title">${t("Capas e informações")}</div>
+    ${chk("online_art", t("Buscar capas e informações na internet"), t("Capas, descrição, gênero e nota do Metacritic pela Steam, Wikipédia e SteamGridDB"))}
+    <label class="field" style="margin-top:8px"><span>${t("Chave da API do SteamGridDB (opcional)")}</span>
+      <input class="input" id="sgdb" type="password" value="${esc(s.steamgriddb_key || "")}" placeholder="${t("Cole a chave aqui")}">
+      <small>${t("Capas verticais em alta qualidade para quase qualquer jogo. Gere grátis em steamgriddb.com → Preferências → API.")}</small></label>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn" id="refresh-art">Atualizar todas as capas</button>
-      <button class="btn" id="restore-removed">Restaurar jogos removidos</button>
-      <button class="btn" id="open-data">Abrir pasta de dados</button>
+      <button class="btn" id="refresh-art">${t("Atualizar todas as capas")}</button>
+      <button class="btn" id="refresh-info">${t("Atualizar informações dos jogos")}</button>
+      <button class="btn" id="restore-removed">${t("Restaurar jogos removidos")}</button>
+      <button class="btn" id="open-data">${t("Abrir pasta de dados")}</button>
     </div>`,
-    `<button class="btn primary" data-close>Fechar</button>`);
+    `<button class="btn primary" data-close>${t("Fechar")}</button>`, false, "settings");
   const body = $("#modal-body");
   body.onchange = async e => {
-    const t = e.target;
-    if (t.dataset.set) { s[t.dataset.set] = t.checked; await api("save_settings", { [t.dataset.set]: t.checked }); }
-    if (t.name === "theme") { s.theme = t.value; applyTheme(t.value); render(); await api("save_settings", { theme: t.value }); }
-    if (t.dataset.fmode) { await api("set_folder_mode", t.dataset.fmode, t.value); toast("Reclassificando os jogos…"); }
+    const el = e.target;
+    if (el.dataset.set) { s[el.dataset.set] = el.checked; await api("save_settings", { [el.dataset.set]: el.checked }); }
+    if (el.name === "theme") { s.theme = el.value; applyTheme(el.value); ambientId = null; render(); await api("save_settings", { theme: el.value }); }
+    if (el.dataset.fmode) { await api("set_folder_mode", el.dataset.fmode, el.value); toast(t("Reclassificando os jogos…")); }
+    if (el.id === "set-lang") {
+      s.language = el.value;
+      await api("save_settings", { language: el.value });
+      await reload();
+      settingsModal();
+      $("#modal-body").scrollTop = 0;
+    }
   };
   body.onclick = async e => {
     const rm = e.target.closest("[data-frm]");
-    if (rm && confirm("Remover essa pasta da biblioteca? Os arquivos dos jogos não são apagados.")) {
+    if (rm && confirm(t("Remover essa pasta da biblioteca? Os arquivos dos jogos não são apagados."))) {
       await api("remove_folder", rm.dataset.frm); await reload(); settingsModal();
     }
   };
-  $("#sgdb").onchange = async e => { await api("save_settings", { steamgriddb_key: e.target.value.trim() }); toast("Chave salva. Clique em “Atualizar todas as capas”.", "ok"); };
-  $("#refresh-art").onclick = async () => { await api("refresh_art", null); toast("Atualizando capas…"); };
-  $("#restore-removed").onclick = async () => { await api("restore_removed"); toast("Os jogos removidos voltam após a busca.", "ok"); };
+  $("#sgdb").onchange = async e => { await api("save_settings", { steamgriddb_key: e.target.value.trim() }); toast(t("Chave salva. Clique em “Atualizar todas as capas”."), "ok"); };
+  $("#refresh-art").onclick = async () => { await api("refresh_art", null); toast(t("Atualizando capas…")); };
+  $("#refresh-info").onclick = async () => { await api("refresh_info", null); toast(t("Atualizando informações dos jogos…")); };
+  $("#restore-removed").onclick = async () => { await api("restore_removed"); toast(t("Os jogos removidos voltam após a busca."), "ok"); };
   $("#open-data").onclick = () => api("open_data_folder");
-  $("#upd-check").onclick = async () => { $("#upd-status").textContent = "Procurando atualizações…"; state.updateDismissed = false; onUpdateInfo(await api("check_updates")); };
+  $("#upd-check").onclick = async () => { $("#upd-status").textContent = t("Procurando atualizações…"); state.updateDismissed = false; onUpdateInfo(await api("check_updates")); };
   $("#upd-install").onclick = installUpdate;
   if (state.update) onUpdateInfo(state.update);
 }
 
 async function editModal(id) {
-  const g = state.lib.games.find(x => x.id === id);
+  const g = gameById(id);
   if (!g) return;
   const exes = [...new Set([g.exe, ...(g.exes || [])].filter(Boolean))];
-  openModal("Editar jogo", `
-    <label class="field"><span>Nome</span><input class="input" id="e-name" value="${esc(g.name)}"></label>
-    <label class="field"><span>Categoria</span><select class="select input" id="e-kind">
-      <option value="recompiled" ${g.kind === "recompiled" ? "selected" : ""}>Recompilado</option>
-      <option value="normal" ${g.kind === "normal" ? "selected" : ""}>Jogo de PC</option></select></label>
-    <label class="field"><span>Executável</span><div class="input-row">
-      <select class="select input" id="e-exe">${g.launch_uri ? `<option value="">${g.source === "steam" ? "Iniciar pela Steam" : "Iniciar pela Epic"}</option>` : ""}
+  openModal(t("Editar jogo"), `
+    <label class="field"><span>${t("Nome")}</span><input class="input" id="e-name" value="${esc(g.name)}"></label>
+    <label class="field"><span>${t("Categoria")}</span><select class="select input" id="e-kind">
+      <option value="recompiled" ${g.kind === "recompiled" ? "selected" : ""}>${t("Recompilado")}</option>
+      <option value="normal" ${g.kind === "normal" ? "selected" : ""}>${t("Jogo de PC")}</option></select></label>
+    <label class="field"><span>${t("Executável")}</span><div class="input-row">
+      <select class="select input" id="e-exe">${g.launch_uri ? `<option value="">${t("Iniciar por {store}", { store: sourceLabel(g.source) })}</option>` : ""}
       ${exes.map(x => `<option value="${esc(x)}" ${x === g.exe ? "selected" : ""}>${esc(g.root && x.startsWith(g.root) ? "…" + x.slice(g.root.length) : x)}</option>`).join("")}
-      ${!exes.length && !g.launch_uri ? `<option value="">(nenhum encontrado)</option>` : ""}</select>
-      <button class="btn" id="e-browse">Procurar…</button></div>
-      <small>Nos ports, “Play ….exe” abre direto no jogo; o outro .exe abre o launcher do port.</small></label>
-    <label class="field"><span>Argumentos de inicialização</span><input class="input" id="e-args" value="${esc(g.args)}" placeholder="opcional"></label>
-    <label class="field"><span>Tempo de jogo (horas)</span><input class="input" id="e-time" type="number" min="0" step="0.1" value="${(g.playtime / 3600).toFixed(1)}" style="width:140px"></label>
-    <label class="check"><input type="checkbox" id="e-hidden" ${g.hidden ? "checked" : ""}><span>Ocultar da biblioteca<small>Continua acessível em Coleções → Ocultos</small></span></label>`,
-    `<button class="btn danger" id="e-remove">Remover da biblioteca</button><span class="spacer"></span><button class="btn" data-close>Cancelar</button><button class="btn primary" id="e-save">Salvar</button>`);
+      ${!exes.length && !g.launch_uri ? `<option value="">${t("(nenhum encontrado)")}</option>` : ""}</select>
+      <button class="btn" id="e-browse">${t("Procurar…")}</button></div>
+      <small>${t("Nos ports, “Play ….exe” abre direto no jogo; o outro .exe abre o launcher do port.")}</small></label>
+    <label class="field"><span>${t("Argumentos de inicialização")}</span><input class="input" id="e-args" value="${esc(g.args)}" placeholder="${t("opcional")}"></label>
+    <label class="field"><span>${t("Tempo de jogo (horas)")}</span><input class="input" id="e-time" type="number" min="0" step="0.1" value="${(g.playtime / 3600).toFixed(1)}" style="width:140px"></label>
+    <label class="check"><input type="checkbox" id="e-hidden" ${g.hidden ? "checked" : ""}><span>${t("Ocultar da biblioteca")}<small>${t("Continua acessível em Coleções → Ocultos")}</small></span></label>`,
+    `<button class="btn danger" id="e-remove">${t("Remover da biblioteca")}</button><span class="spacer"></span><button class="btn" data-close>${t("Cancelar")}</button><button class="btn primary" id="e-save">${t("Salvar")}</button>`, false, "edit");
   $("#e-browse").onclick = async () => {
     const p = await api("pick_exe", id);
     if (p) $("#e-exe").add(new Option(p, p, true, true));
   };
   $("#e-remove").onclick = async () => {
-    if (!confirm(`Remover “${g.name}” da biblioteca? Os arquivos do jogo não são apagados.`)) return;
-    await api("remove_game", id); closeModal(); closeDetails(); await reload(); toast("Removido da biblioteca.");
+    if (!confirm(t("Remover “{name}” da biblioteca? Os arquivos do jogo não são apagados.", { name: g.name }))) return;
+    await api("remove_game", id); closeModal(); closeDetails(); await reload(); toast(t("Removido da biblioteca."));
   };
   $("#e-save").onclick = async () => {
     const fields = { hidden: $("#e-hidden").checked, args: $("#e-args").value.trim() };
@@ -571,12 +849,12 @@ async function editModal(id) {
     const hrs = parseFloat($("#e-time").value);
     if (!isNaN(hrs) && Math.abs(hrs * 3600 - g.playtime) > 180) fields.playtime_hours = hrs;
     await api("update_game", id, fields);
-    closeModal(); await reload(); toast("Alterações salvas.", "ok");
+    closeModal(); await reload(); toast(t("Alterações salvas."), "ok");
   };
 }
 
 async function artModal(id) {
-  const g = state.lib.games.find(x => x.id === id);
+  const g = gameById(id);
   if (!g) return;
   let kind = "cover";
   let data = null;
@@ -584,25 +862,25 @@ async function artModal(id) {
     const wide = kind === "hero";
     const local = (data?.local || []).filter(i => wide ? i.w >= i.h * 1.2 : true);
     const online = (data?.online || []).filter(i => i.kind === kind);
-    openModal("Capa e imagem de fundo", `
+    openModal(t("Capa e imagem de fundo"), `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;flex-wrap:wrap">
-        <div class="seg" id="a-kind"><button data-k="cover" class="${kind === "cover" ? "on" : ""}">Capa</button><button data-k="hero" class="${kind === "hero" ? "on" : ""}">Imagem de fundo</button></div>
-        <div style="display:flex;gap:6px"><button class="btn" id="a-file">Escolher arquivo…</button><button class="btn" id="a-reset">Usar automática</button></div>
+        <div class="seg" id="a-kind"><button data-k="cover" class="${kind === "cover" ? "on" : ""}">${t("Capa")}</button><button data-k="hero" class="${kind === "hero" ? "on" : ""}">${t("Imagem de fundo")}</button></div>
+        <div style="display:flex;gap:6px"><button class="btn" id="a-file">${t("Escolher arquivo…")}</button><button class="btn" id="a-reset">${t("Usar automática")}</button></div>
       </div>
-      <div class="group-title">Imagens no computador</div>
-      ${data ? (local.length ? `<div class="art-grid ${wide ? "wide" : ""}">${local.map(i => `<button class="art-opt" data-src="${i.token}" title="${esc(i.path)}"><img src="/local/${i.token}" loading="lazy"><span>${esc(i.name)} · ${i.w}×${i.h}</span></button>`).join("")}</div>` : `<p class="hint">Nenhuma imagem encontrada.</p>`) : `<div class="loading"><span class="spinner"></span>Procurando…</div>`}
-      <div class="group-title">Internet</div>
-      ${data ? (online.length ? `<div class="art-grid ${wide ? "wide" : ""}">${online.map(i => `<button class="art-opt" data-src="${esc(i.url)}"><img src="${esc(i.url)}" loading="lazy" onerror="this.parentElement.classList.add('bad')"><span>${esc(i.label)}</span></button>`).join("")}</div>` : `<p class="hint">Nada encontrado. Configure a chave do SteamGridDB para mais opções.</p>`) : `<div class="loading"><span class="spinner"></span>Buscando na Steam, Wikipédia e SteamGridDB…</div>`}`,
-      "", true);
+      <div class="group-title">${t("Imagens no computador")}</div>
+      ${data ? (local.length ? `<div class="art-grid ${wide ? "wide" : ""}">${local.map(i => `<button class="art-opt" data-src="${i.token}" title="${esc(i.path)}"><img src="/local/${i.token}" loading="lazy"><span>${esc(i.name)} · ${i.w}×${i.h}</span></button>`).join("")}</div>` : `<p class="hint">${t("Nenhuma imagem encontrada.")}</p>`) : `<div class="loading"><span class="spinner"></span>${t("Procurando…")}</div>`}
+      <div class="group-title">${t("Internet")}</div>
+      ${data ? (online.length ? `<div class="art-grid ${wide ? "wide" : ""}">${online.map(i => `<button class="art-opt" data-src="${esc(i.url)}"><img src="${esc(i.url)}" loading="lazy" onerror="this.parentElement.classList.add('bad')"><span>${esc(i.label)}</span></button>`).join("")}</div>` : `<p class="hint">${t("Nada encontrado. Configure a chave do SteamGridDB para mais opções.")}</p>`) : `<div class="loading"><span class="spinner"></span>${t("Buscando na Steam, Wikipédia e SteamGridDB…")}</div>`}`,
+      "", true, "art");
     $("#a-kind").onclick = e => { const b = e.target.closest("[data-k]"); if (b) { kind = b.dataset.k; draw(); } };
-    $("#a-file").onclick = async () => { if (await api("pick_art_file", id, kind)) { await reload(); closeModal(); toast("Imagem atualizada.", "ok"); } };
-    $("#a-reset").onclick = async () => { await api("set_art", id, kind, null); await reload(); closeModal(); toast("Imagem automática restaurada."); };
+    $("#a-file").onclick = async () => { if (await api("pick_art_file", id, kind)) { await reload(); closeModal(); toast(t("Imagem atualizada."), "ok"); } };
+    $("#a-reset").onclick = async () => { await api("set_art", id, kind, null); await reload(); closeModal(); toast(t("Imagem automática restaurada.")); };
     $("#modal-body").onclick = async e => {
       const b = e.target.closest(".art-opt");
       if (!b) return;
       b.style.opacity = ".5";
       const ok = await api("set_art", id, kind, b.dataset.src);
-      if (ok) { await reload(); closeModal(); toast("Imagem atualizada.", "ok"); } else { b.style.opacity = "1"; toast("Não foi possível baixar essa imagem.", "error"); }
+      if (ok) { await reload(); closeModal(); toast(t("Imagem atualizada."), "ok"); } else { b.style.opacity = "1"; toast(t("Não foi possível baixar essa imagem."), "error"); }
     };
   };
   draw();
@@ -614,35 +892,35 @@ async function artModal(id) {
 function updateLabel(u) {
   const v = u.latest?.version;
   return {
-    idle: "Verificação automática ligada.",
-    checking: "Procurando atualizações…",
-    uptodate: `Você está na versão mais recente (${u.current}).`,
-    available: `Nova versão ${v} disponível.`,
-    downloading: `Baixando a versão ${v}… ${Math.round((u.progress || 0) * 100)}%`,
-    ready: `Versão ${v} baixada e pronta para instalar.`,
-    installing: "Instalando… o LZ Launcher vai reiniciar.",
-    error: u.error || "Erro ao verificar atualizações.",
+    idle: t("Verificação automática ligada."),
+    checking: t("Procurando atualizações…"),
+    uptodate: t("Você está na versão mais recente ({v}).", { v: u.current }),
+    available: t("Nova versão {v} disponível.", { v }),
+    downloading: t("Baixando a versão {v}… {p}%", { v, p: Math.round((u.progress || 0) * 100) }),
+    ready: t("Versão {v} baixada e pronta para instalar.", { v }),
+    installing: t("Instalando… o LZ Launcher vai reiniciar."),
+    error: u.error || t("Erro ao verificar atualizações."),
   }[u.status] || "";
 }
 
 function onUpdateInfo(u) {
   state.update = u;
-  $("#app-version").textContent = "Versão " + u.current;
+  $("#app-version").textContent = t("Versão") + " " + u.current;
   const card = $("#update-card");
   const has = ["available", "downloading", "ready", "installing"].includes(u.status) && u.latest;
   if (!has || state.updateDismissed) { card.hidden = true; }
   else {
     card.hidden = false;
     const busy = u.status === "downloading" || u.status === "installing";
-    const btn = u.status === "ready" ? "Reiniciar e atualizar" : "Atualizar agora";
-    const html = `<div class="uc-title">Atualização disponível</div>
+    const btn = u.status === "ready" ? t("Reiniciar e atualizar") : t("Atualizar agora");
+    const html = `<div class="uc-title">${t("Atualização disponível")}</div>
       <div class="uc-text">${esc(updateLabel(u))}</div>
       ${u.status === "downloading" ? `<div class="uc-bar"><i style="width:${Math.round((u.progress || 0) * 100)}%"></i></div>` : ""}
-      <div class="uc-actions">${busy ? "" : `<button class="btn primary" data-update="install">${btn}</button><button class="btn" data-update="later">Depois</button>`}</div>`;
+      <div class="uc-actions">${busy ? "" : `<button class="btn primary" data-update="install">${btn}</button><button class="btn" data-update="later">${t("Depois")}</button>`}</div>`;
     if (card._html !== html) { card.innerHTML = html; card._html = html; }
     if (!state.updateToastShown) {
       state.updateToastShown = true;
-      toast(`Nova versão ${u.latest.version} do LZ Launcher disponível.`, "ok");
+      toast(t("Nova versão {v} do LZ Launcher disponível.", { v: u.latest.version }), "ok");
     }
   }
   const st = $("#upd-status");
@@ -650,7 +928,7 @@ function onUpdateInfo(u) {
     st.textContent = updateLabel(u);
     const b = $("#upd-install");
     b.hidden = !(u.status === "available" || u.status === "ready");
-    b.textContent = u.status === "ready" ? "Reiniciar e atualizar" : `Atualizar para ${u.latest?.version || ""}`;
+    b.textContent = u.status === "ready" ? t("Reiniciar e atualizar") : t("Atualizar para {v}", { v: u.latest?.version || "" });
     const notes = $("#upd-notes");
     notes.hidden = !(has && u.latest?.notes);
     notes.textContent = u.latest?.notes || "";
@@ -659,17 +937,227 @@ function onUpdateInfo(u) {
 
 async function installUpdate() {
   if (Object.keys(state.running).length &&
-      !confirm("Há um jogo aberto. Ele continua rodando, mas o tempo desta sessão pode deixar de ser contado enquanto o LZ Launcher reinicia. Atualizar agora?")) return;
-  if (state.update?.mode !== "source") toast("Atualizando… o LZ Launcher vai fechar e abrir de novo.");
+    !confirm(t("Há um jogo aberto. Ele continua rodando, mas o tempo desta sessão pode deixar de ser contado enquanto o LZ Launcher reinicia. Atualizar agora?"))) return;
+  if (state.update?.mode !== "source") toast(t("Atualizando… o LZ Launcher vai fechar e abrir de novo."));
   const r = await api("install_update");
   if (r && !r.ok && r.error) toast(r.error, "error");
 }
+
+/* ---------------- Modo TV ---------------- */
+const TV = { tab: 0, index: 0, expanded: false };
+function tvTabs() {
+  return [
+    { id: "all", label: t("Todos"), filter: g => !g.hidden },
+    { id: "recent", label: t("Recentes"), filter: g => !g.hidden && g.last_played, sort: "recent" },
+    { id: "recompiled", label: t("Recompilados"), filter: g => !g.hidden && g.kind === "recompiled" },
+    { id: "normal", label: t("Jogos de PC"), filter: g => !g.hidden && g.kind === "normal" },
+    { id: "favorites", label: t("Favoritos"), filter: g => !g.hidden && g.favorite },
+  ];
+}
+function tvList() {
+  const tab = tvTabs()[TV.tab];
+  return sortGames(state.lib.games.filter(tab.filter), tab.sort || (TV.tab === 0 ? "recent" : "name"));
+}
+
+function enterTV() {
+  if (state.tv) return;
+  state.tv = true;
+  closeModal();
+  $("#tv").hidden = false;
+  document.body.classList.add("tv-on");
+  api("set_fullscreen", true).catch(() => { });
+  TV.index = 0; TV.expanded = false;
+  $("#tv-shelf")._html = null;
+  renderTV();
+  tickClock();
+}
+function exitTV() {
+  if (!state.tv) return;
+  state.tv = false;
+  $("#tv").hidden = true;
+  document.body.classList.remove("tv-on");
+  api("set_fullscreen", false).catch(() => { });
+}
+function tickClock() {
+  if (!state.tv) return;
+  $("#tv-clock").textContent = new Date().toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" });
+  setTimeout(tickClock, 15000);
+}
+
+function renderTV() {
+  if (!state.tv) return;
+  const tabs = tvTabs();
+  $("#tv-tabs").innerHTML = tabs.map((tb, i) => `<button class="tv-tab ${i === TV.tab ? "on" : ""}" data-tvtab="${i}">${tb.label}</button>`).join("");
+  const list = tvList();
+  TV.index = Math.max(0, Math.min(TV.index, list.length - 1));
+  const shelf = $("#tv-shelf");
+  const html = list.map((g, i) => `<div class="tv-card" data-tvi="${i}" data-name="${esc(g.name)}">${coverHTML(g)}${isRunning(g.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${g.favorite ? '<span class="tv-fav">★</span>' : ""}</div></div>`).join("")
+    || `<div class="tv-empty">${t("Nenhum jogo nesta aba.")}</div>`;
+  if (shelf._html !== html) { shelf.innerHTML = html; shelf._html = html; }
+  $$(".tv-card", shelf).forEach((c, i) => c.classList.toggle("focus", i === TV.index));
+  const focused = $(".tv-card.focus", shelf);
+  if (focused) focused.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+
+  const g = list[TV.index];
+  const info = $("#tv-info");
+  if (!g) { info.innerHTML = ""; return; }
+  // fundo com transição suave entre dois quadros
+  const src = g.hero || g.cover || "";
+  const bgs = $$(".tv-bg img");
+  const cur = bgs.find(b => b.classList.contains("on"));
+  if (!cur || cur.dataset.src !== src) {
+    const next = bgs.find(b => b !== cur) || bgs[0];
+    next.dataset.src = src;
+    next.classList.toggle("blurred", !g.hero);
+    if (src) next.src = src; else next.removeAttribute("src");
+    next.classList.add("on"); if (cur) cur.classList.remove("on");
+  }
+  const running = isRunning(g.id);
+  const i = g.info || {};
+  const chips = [
+    `<span class="tv-chip">${esc(platformLabel(g))}</span>`,
+    g.kind === "recompiled" ? `<span class="tv-chip">${t("Recompilado")}</span>` : "",
+    i.year ? `<span class="tv-chip">${i.year}</span>` : "",
+    i.metacritic ? `<span class="tv-chip meta">Metacritic ${i.metacritic}</span>` : "",
+    ...(i.genres || []).slice(0, 2).map(x => `<span class="tv-chip">${esc(x)}</span>`),
+  ].join("");
+  info.classList.toggle("expanded", TV.expanded);
+  info.innerHTML = `
+    <h1>${esc(g.name)}</h1>
+    <div class="tv-chips">${chips}</div>
+    <div class="tv-stats">
+      <div><small>${t("Tempo de jogo")}</small><b>${fmtPlaytime(g.playtime)}</b></div>
+      <div><small>${running ? t("Sessão atual") : t("Última vez")}</small><b>${running ? fmtClock(state.running[g.id]) : fmtAgo(g.last_played)}</b></div>
+    </div>
+    ${i.description ? `<p class="tv-desc">${esc(i.description)}</p>` : ""}
+    <div class="tv-actions"><span class="tv-btn primary"><i class="gp a">A</i>${running ? t("Jogando agora") : t("Jogar")}</span></div>`;
+  $("#tv-hints").innerHTML = [
+    ["a", "A", t("Jogar")], ["x", "X", g.favorite ? t("Remover favorito") : t("Favoritar")],
+    ["y", "Y", TV.expanded ? t("Menos detalhes") : t("Mais detalhes")], ["lb", "LB RB", t("Abas")], ["b", "B", t("Sair do Modo TV")],
+  ].map(([c, k, label]) => `<span><i class="gp ${c}">${k}</i>${label}</span>`).join("");
+}
+
+function tvAction(act) {
+  const list = tvList();
+  const g = list[TV.index];
+  switch (act) {
+    case "left": TV.index = Math.max(0, TV.index - 1); TV.expanded = false; break;
+    case "right": TV.index = Math.min(list.length - 1, TV.index + 1); TV.expanded = false; break;
+    case "up": TV.expanded = true; break;
+    case "down": TV.expanded = false; break;
+    case "lb": TV.tab = (TV.tab + tvTabs().length - 1) % tvTabs().length; TV.index = 0; break;
+    case "rb": TV.tab = (TV.tab + 1) % tvTabs().length; TV.index = 0; break;
+    case "a": if (g) playGame(g.id); break;
+    case "x": if (g) toggleFav(g.id); break;
+    case "y": TV.expanded = !TV.expanded; break;
+    case "b": case "start": case "select": exitTV(); return;
+  }
+  renderTV();
+}
+
+/* ---------------- Controle (gamepad) ---------------- */
+const PAD_BUTTONS = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right" };
+const pad = { prev: {}, next: {}, announced: false };
+
+function startGamepad() {
+  window.addEventListener("gamepadconnected", e => {
+    if (!pad.announced) {
+      pad.announced = true;
+      toast(t("Controle conectado: {name}. Aperte Menu (☰) para o Modo TV.", { name: (e.gamepad.id || "").replace(/\(.*?\)/g, "").trim() || "Gamepad" }), "ok");
+    }
+  });
+  const loop = () => {
+    const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+    // só reage com a janela em foco (para não agir enquanto você joga)
+    if (pads.length && document.hasFocus()) {
+      const now = performance.now();
+      const held = {};
+      for (const p of pads) {
+        for (const [i, name] of Object.entries(PAD_BUTTONS)) if (p.buttons[i]?.pressed) held[name] = true;
+        const [ax, ay] = [p.axes[0] || 0, p.axes[1] || 0];
+        if (ax < -0.55) held.left = true; if (ax > 0.55) held.right = true;
+        if (ay < -0.55) held.up = true; if (ay > 0.55) held.down = true;
+      }
+      for (const name of new Set([...Object.values(PAD_BUTTONS)])) {
+        if (held[name] && !pad.prev[name]) { padAction(name); pad.next[name] = now + 380; }
+        else if (held[name] && ["up", "down", "left", "right"].includes(name) && now >= pad.next[name]) { padAction(name); pad.next[name] = now + 110; }
+      }
+      pad.prev = held;
+    }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+function padAction(act) {
+  if (state.tv) { tvAction(act); return; }
+  if (act === "start" || act === "select") { enterTV(); return; }
+  if (act === "b") {
+    if (!$("#modal").hidden) closeModal();
+    else if (state.current) closeDetails();
+    else if (state.page !== "library") showPage("library");
+    return;
+  }
+  if (act === "lb" || act === "rb") {
+    const order = [["library", "all"], ["library", "recompiled"], ["library", "normal"], ["stats", null]];
+    let i = order.findIndex(([p, n]) => p === state.page && (n === null || (n === state.nav && !state.col)));
+    i = (i + (act === "rb" ? 1 : order.length - 1) + (i < 0 ? 1 : 0)) % order.length;
+    const [p, n] = order[i];
+    if (n) { state.nav = n; state.col = null; localSet("nav", n); }
+    showPage(p);
+    return;
+  }
+  const cur = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+  if (act === "a") { if (cur) { cur.classList.contains("card") || cur.classList.contains("row") ? openDetails(cur.dataset.id) : cur.click(); } return; }
+  if (act === "x") {
+    const id = cur?.dataset?.id || state.current;
+    if (id) toggleFav(id);
+    return;
+  }
+  if (act === "y") { if (cur?.dataset?.id) playGame(cur.dataset.id); else if (state.current) playGame(state.current); return; }
+  if (["up", "down", "left", "right"].includes(act)) spatialMove(act, cur);
+}
+
+// Navegação espacial: vai para o elemento visível mais próximo na direção pedida
+function focusables() {
+  const scope = !$("#modal").hidden ? $("#modal") : document;
+  return $$(".nav-item, .side-btn, .card, .row, .actionbar button:not([hidden]), .back, .lib-tools button, .hbar, .sess-row, .modal-card button, .modal-card input, .modal-card select, .info-src a, .meta-score", scope)
+    .filter(el => el.offsetParent !== null && !el.closest("[hidden]"));
+}
+function spatialMove(dir, cur) {
+  const items = focusables();
+  if (!items.length) return;
+  if (!cur || !items.includes(cur)) {
+    (items.find(el => el.classList.contains("card") || el.classList.contains("row")) || items[0]).focus();
+    padFocus();
+    return;
+  }
+  const r = cur.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let best = null, bestScore = Infinity;
+  for (const el of items) {
+    if (el === cur) continue;
+    const b = el.getBoundingClientRect();
+    const x = b.left + b.width / 2, y = b.top + b.height / 2;
+    const dx = x - cx, dy = y - cy;
+    const ok = { left: dx < -4, right: dx > 4, up: dy < -4, down: dy > 4 }[dir];
+    if (!ok) continue;
+    const main = dir === "left" || dir === "right" ? Math.abs(dx) : Math.abs(dy);
+    const cross = dir === "left" || dir === "right" ? Math.abs(dy) : Math.abs(dx);
+    const score = main + cross * 2.5;
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (best) { best.focus({ preventScroll: true }); best.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" }); padFocus(); }
+}
+function padFocus() { document.body.classList.add("pad-mode"); }
 
 /* ---------------- Sincronização ---------------- */
 async function reload() {
   const lib = await api("library");
   state.lib = lib;
   state.revision = lib.revision;
+  const lang = QP.get("lang") || lib.lang || "pt";
+  if (lang !== LANG) { setLang(lang); $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = ""; $("#stats-body")._key = null; $("#tv-shelf")._html = null; }
   applyTheme(QP.get("theme") || lib.settings.theme);
   render();
 }
@@ -681,7 +1169,7 @@ async function poll() {
     state.running = s.running || {};
     if (s.update) onUpdateInfo(s.update);
     $("#scanbar").hidden = !s.scanning;
-    $("#scan-msg").textContent = s.scan_message || "Procurando jogos…";
+    $("#scan-msg").textContent = s.scan_message || t("Procurando jogos…");
     $("#btn-rescan").classList.toggle("spin", !!(s.scanning || s.art_busy));
     state.scanning = s.scanning;
     const keys = Object.keys(state.running).sort().join(",");
@@ -690,6 +1178,8 @@ async function poll() {
     else if (keys) {
       renderNowPlaying();
       if (state.current && isRunning(state.current)) renderDetails();
+      if (state.page === "stats") renderStats();
+      if (state.tv) renderTV();
     }
     lastRunningKeys = keys;
   } catch (e) { /* janela fechando */ }
@@ -700,9 +1190,10 @@ async function poll() {
 function bindEvents() {
   $("#nav").onclick = e => {
     const b = e.target.closest(".nav-item"); if (!b) return;
+    if (b.dataset.page) { showPage(b.dataset.page); return; }
     if (b.dataset.nav) { state.nav = b.dataset.nav; state.col = null; localSet("nav", state.nav); }
     else state.col = state.col === b.dataset.col ? null : b.dataset.col;
-    closeDetails(); render(); $("#scroller").scrollTop = 0;
+    showPage("library"); $("#scroller").scrollTop = 0;
   };
   $("#search").oninput = e => { state.query = e.target.value; render(); };
   $("#sort").onchange = e => { state.sort = e.target.value; state.sortDesc = false; localSet("sort", state.sort); render(); };
@@ -712,8 +1203,9 @@ function bindEvents() {
   };
   $("#size").oninput = e => { document.documentElement.style.setProperty("--card", e.target.value + "px"); localSet("size", e.target.value); };
   $("#btn-add").onclick = e => { e.stopPropagation(); $("#menu-add").hidden = !$("#menu-add").hidden; };
-  $("#btn-rescan").onclick = async () => { await api("rescan", false); toast("Procurando jogos novos…"); };
+  $("#btn-rescan").onclick = async () => { await api("rescan", false); toast(t("Procurando jogos novos…")); };
   $("#btn-settings").onclick = settingsModal;
+  $("#btn-tv").onclick = enterTV;
   $("#modal-close").onclick = closeModal;
   // fecha ao clicar fora, mas não quando o clique termina fora depois de arrastar/selecionar dentro da janela
   let downOnBackdrop = false;
@@ -723,15 +1215,39 @@ function bindEvents() {
   $("#d-play").onclick = () => isRunning(state.current) ? stopGame(state.current) : playGame(state.current);
   $("#d-alt").onclick = async () => {
     const r = await api("launch", state.current, true);
-    r.ok ? toast("Abrindo o launcher do port…", "ok") : toast(r.error, "error");
+    r.ok ? toast(t("Abrindo o launcher do port…"), "ok") : toast(r.error, "error");
   };
   $("#d-fav").onclick = () => toggleFav(state.current);
   $("#d-folder").onclick = () => api("open_folder", state.current);
   $("#d-art").onclick = () => artModal(state.current);
   $("#d-edit").onclick = () => editModal(state.current);
+  $("#d-info-refresh").onclick = async () => { await api("refresh_info", state.current); toast(t("Atualizando informações…")); };
+
+  // fundo dinâmico nos temas PlayStation / Xbox / Cyberpunk
+  const ambient = e => {
+    if (!AMBIENT_THEMES.includes(theme())) return;
+    const c = e.target.closest(".card, .row");
+    if (c) setAmbient(gameById(c.dataset.id));
+  };
+  $("#grid").addEventListener("mouseover", ambient);
+  $("#list").addEventListener("mouseover", ambient);
+  $("#grid").addEventListener("focusin", ambient);
+  $("#list").addEventListener("focusin", ambient);
+
+  // Modo TV com mouse
+  $("#tv").addEventListener("click", e => {
+    const tab = e.target.closest("[data-tvtab]");
+    if (tab) { TV.tab = +tab.dataset.tvtab; TV.index = 0; renderTV(); return; }
+    const card = e.target.closest("[data-tvi]");
+    if (card) { const i = +card.dataset.tvi; if (i === TV.index) tvAction("a"); else { TV.index = i; renderTV(); } return; }
+    if (e.target.closest("#tv-exit")) exitTV();
+  });
+  $("#tv-shelf").addEventListener("wheel", e => { e.preventDefault(); tvAction(e.deltaY > 0 || e.deltaX > 0 ? "right" : "left"); }, { passive: false });
 
   document.addEventListener("click", e => {
     if (!e.target.closest(".menu-wrap")) $("#menu-add").hidden = true;
+    const url = e.target.closest("[data-url]");
+    if (url) { api("open_url", url.dataset.url); return; }
     const act = e.target.closest("[data-act]");
     if (act) {
       $("#menu-add").hidden = true;
@@ -755,18 +1271,26 @@ function bindEvents() {
     const p = e.target.closest("[data-play]");
     if (p) { e.stopPropagation(); playGame(p.dataset.play); return; }
     const o = e.target.closest("[data-open]");
-    if (o) { openDetails(o.dataset.open); return; }
+    if (o && !e.target.closest("#tv")) { openDetails(o.dataset.open); return; }
     const item = e.target.closest(".card, .row");
     if (item) openDetails(item.dataset.id);
   });
+  document.addEventListener("mousedown", () => document.body.classList.remove("pad-mode"));
   document.addEventListener("keydown", e => {
+    if (state.tv) {
+      const map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", Enter: "a", " ": "a", Escape: "b", Backspace: "b", f: "x", i: "y", q: "lb", e: "rb", F11: "b" };
+      const act = map[e.key];
+      if (act) { e.preventDefault(); tvAction(act); }
+      return;
+    }
+    if (e.key === "F11") { e.preventDefault(); enterTV(); return; }
     if (e.key === "Escape") {
       if (!$("#modal").hidden) closeModal();
       else if (state.current) closeDetails();
       else if (state.query) { $("#search").value = ""; state.query = ""; render(); }
     }
-    if ((e.key === "f" && e.ctrlKey) || (e.key === "/" && document.activeElement.tagName !== "INPUT")) { e.preventDefault(); closeDetails(); $("#search").focus(); }
-    if (e.key === "Enter" && document.activeElement.classList.contains("card")) openDetails(document.activeElement.dataset.id);
+    if ((e.key === "f" && e.ctrlKey) || (e.key === "/" && document.activeElement.tagName !== "INPUT")) { e.preventDefault(); showPage("library"); $("#search").focus(); }
+    if (e.key === "Enter" && (document.activeElement.classList.contains("card") || document.activeElement.classList.contains("row"))) openDetails(document.activeElement.dataset.id);
   });
   document.addEventListener("contextmenu", e => { if (!e.target.closest("input")) e.preventDefault(); });
 }
@@ -784,11 +1308,15 @@ async function boot() {
   if (QP.get("nav")) state.nav = QP.get("nav");
   bindEvents();
   bindModalResize();
+  bindTooltips();
+  startGamepad();
   await reload();
+  if (QP.get("page")) showPage(QP.get("page"));
   if (QP.get("game")) {
     const g = state.lib.games.find(x => x.name.toLowerCase().includes(QP.get("game").toLowerCase()));
     if (g) openDetails(g.id);
   }
+  if (QP.get("tv") || (state.lib.settings.tv_on_start && !QP.get("page") && !QP.get("game"))) enterTV();
   poll();
 }
 

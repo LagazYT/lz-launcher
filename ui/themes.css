@@ -3,21 +3,6 @@
 .spotlight { display: none; }
 .pbadge { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .3px; padding: 2px 7px; border-radius: 3px; background: var(--panel-2); color: var(--text-2); margin-right: 6px; }
 
-/* Seletor de tema nas configurações */
-.theme-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.theme-opt { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
-.theme-opt:has(input:checked) { border-color: var(--accent); }
-.theme-opt input { accent-color: var(--accent); margin: 0; }
-.theme-opt small { display: block; color: var(--text-3); font-size: 11.5px; }
-.swatch { display: flex; flex: none; border-radius: 4px; overflow: hidden; border: 1px solid var(--line-2); }
-.swatch i { width: 12px; height: 30px; }
-.swatch.sober i:nth-child(1) { background: #1a1b1f; }
-.swatch.sober i:nth-child(2) { background: #2c2e34; }
-.swatch.sober i:nth-child(3) { background: #e8a33d; }
-.swatch.neon i:nth-child(1) { background: #0b0d12; }
-.swatch.neon i:nth-child(2) { background: #7c5cff; }
-.swatch.neon i:nth-child(3) { background: #22d3ee; }
-
 /* =====================================================================
    TEMA NEON (visual da primeira versão)
    ===================================================================== */

@@ -11,6 +11,7 @@ from gamevault.library import Library
 from gamevault.paths import LOG_FILE
 from gamevault.server import make_server
 from gamevault.tray import Tray
+from gamevault.i18n import tr
 
 
 def main():
@@ -34,7 +35,7 @@ def main():
         tray.stop()
         window.destroy()
 
-    tray = Tray(on_open=show_window, on_quit=quit_app)
+    tray = Tray(on_open=show_window, on_quit=quit_app, lang=lib.lang())
 
     def on_closing():
         # "Fechar" com a opção ligada só esconde a janela; o app segue na bandeja
@@ -44,7 +45,8 @@ def main():
         return True
 
     lib.updater.quit_app = quit_app
-    lib.updater.on_found = lambda v: tray.notify(f"Nova versão {v} do {APP_NAME} disponível.")
+    lib.updater.on_found = lambda v: tray.notify(tr("Nova versão {version} do {app} disponível.", lib.lang(),
+                                                    version=v, app=APP_NAME))
     window.events.closing += on_closing
     tray.start()
     lib.start()

@@ -13,6 +13,18 @@ import psutil
 from .paths import norm
 
 POLL = 4.0
+HISTORY_MAX = 400      # sessões guardadas por jogo
+MIN_SESSION = 10       # segundos; sessões menores são ignoradas no histórico
+
+
+def add_session(g: dict, start: float, end: float):
+    """Registra uma sessão de jogo no histórico do jogo."""
+    if end - start < MIN_SESSION:
+        return
+    hist = g.setdefault("history", [])
+    hist.append({"s": round(start), "e": round(end)})
+    if len(hist) > HISTORY_MAX:
+        del hist[: len(hist) - HISTORY_MAX]
 
 
 class PlayTracker:
@@ -24,7 +36,16 @@ class PlayTracker:
         self.thread = threading.Thread(target=self._loop, name="tracker", daemon=True)
 
     def start(self):
+        self._recover_open_sessions()
         self.thread.start()
+
+    def _recover_open_sessions(self):
+        """Sessões que ficaram abertas porque o app fechou com o jogo rodando."""
+        with self.lib.store.lock:
+            for g in self.lib.store.games.values():
+                op = g.pop("open_session", None)
+                if op and op.get("s") and op.get("l"):
+                    add_session(g, op["s"], op["l"])
 
     def stop(self):
         self._stop.set()
@@ -94,12 +115,15 @@ class PlayTracker:
                         g["playtime"] = float(g.get("playtime", 0)) + delta
                         self.running[gid]["pids"] = pids
                     g["last_played"] = now
+                    g["open_session"] = {"s": round(self.running[gid]["start"]), "l": round(now)}
                 for gid in list(self.running):
                     if gid not in found:
                         info = self.running.pop(gid)
                         g = games.get(gid)
                         if g:
                             g["last_session"] = now - info["start"]
+                            g.pop("open_session", None)
+                            add_session(g, info["start"], now)
                         changed = True
                 for gid, t in list(self._pending.items()):
                     if now - t > 120:

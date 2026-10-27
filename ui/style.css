@@ -99,7 +99,7 @@ input[type=range] { accent-color: var(--accent); width: 90px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card), 1fr)); gap: 22px 16px; }
 .card { min-width: 0; outline: none; cursor: pointer; }
 .cover {
-  position: relative; aspect-ratio: 2 / 3; overflow: hidden; background: var(--panel); border-radius: 3px;
+  position: relative; aspect-ratio: var(--cover-ratio, 2 / 3); overflow: hidden; background: var(--panel); border-radius: 3px;
   outline: 1px solid rgba(255, 255, 255, .06); outline-offset: -1px;
 }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

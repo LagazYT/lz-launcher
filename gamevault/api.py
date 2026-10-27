@@ -5,6 +5,8 @@ from pathlib import Path
 
 import webview
 
+from .i18n import tr
+
 from .paths import norm
 
 
@@ -30,10 +32,10 @@ class Api:
 
     def add_folder(self, path, mode="auto"):
         if not path or not os.path.isdir(path):
-            return {"ok": False, "error": "Pasta inválida."}
+            return {"ok": False, "error": tr("Pasta inválida.", self._lib.lang())}
         folders = self._lib.store.folders
         if any(norm(f["path"]) == norm(path) for f in folders):
-            return {"ok": False, "error": "Essa pasta já está na biblioteca."}
+            return {"ok": False, "error": tr("Essa pasta já está na biblioteca.", self._lib.lang())}
         folders.append({"path": path, "mode": mode})
         self._lib.store.save()
         self._lib.rescan_async()
@@ -182,13 +184,34 @@ class Api:
     # --- configurações ---------------------------------------------------------
     def save_settings(self, settings):
         st = self._lib.store.settings
-        before_import = (st.get("import_steam"), st.get("import_epic"))
+        import_keys = [k for k in st if k.startswith("import_")]
+        before_import = [st.get(k) for k in import_keys]
+        before_lang = self._lib.lang()
         for k, v in (settings or {}).items():
             if k in st:
                 st[k] = v
         self._lib.store.save()
-        if before_import != (st.get("import_steam"), st.get("import_epic")):
+        if before_import != [st.get(k) for k in import_keys]:
             self._lib.rescan_async()
+        if self._lib.lang() != before_lang:
+            self._lib.refresh_info()  # descrições dos jogos no idioma novo
+        return True
+
+    def refresh_info(self, gid=None):
+        self._lib.refresh_info(gid)
+        return True
+
+    # --- Modo TV ---------------------------------------------------------------
+    def set_fullscreen(self, on):
+        w = self._window
+        if not w:
+            return False
+        try:
+            if bool(on) != getattr(self, "_fullscreen", False):
+                w.toggle_fullscreen()
+                self._fullscreen = bool(on)
+        except Exception:
+            return False
         return True
 
     def open_data_folder(self):
