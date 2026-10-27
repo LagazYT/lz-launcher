@@ -2,9 +2,9 @@
 
 # LZ Launcher
 
-**Criado por Lagaz** · Windows 10/11 64-bit
+**Criado por Lagaz** · Windows 10/11 64-bit · Português · English · Español
 
-Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC**. Ele reconhece cada jogo sozinho, mostra a **capa correta**, conta o **tempo de jogo** e abre tudo com um clique.
+Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC** de todas as lojas. Ele reconhece cada jogo sozinho, mostra a **capa correta** e as **informações do jogo**, conta o **tempo de jogo** e abre tudo com um clique — ou com o **controle**, no **Modo TV**.
 
 ![Biblioteca](docs/screenshots/biblioteca.png)
 
@@ -25,9 +25,13 @@ O app verifica as [Releases](../../releases) deste repositório ao abrir e a cad
 
 1. baixa o arquivo certo: o Setup, se estiver instalado, ou o Portable;
 2. fecha, aplica a atualização e reabre sozinho;
-3. mantém sua biblioteca, capas e tempo de jogo.
+3. mantém sua biblioteca, capas, tempo de jogo e histórico.
 
 Também dá para procurar na hora em **Configurações → Atualizações → Procurar atualizações**, ou por script: `"LZ Launcher.exe" --update`.
+
+## Idiomas
+
+O app está em **português, inglês e espanhol** e escolhe sozinho o idioma do Windows. Dá para trocar em **Configurações → Idioma** — as descrições dos jogos também passam a vir no idioma escolhido.
 
 ## O que ele faz
 
@@ -46,33 +50,73 @@ Também dá para procurar na hora em **Configurações → Atualizações → Pr
 | `Play <Jogo>.exe` + `<Jogo>.exe` | Port com launcher: **Jogar** abre direto no jogo e **Launcher do port** abre as configurações do port |
 | `out/analysis.json`, `eboot.bin`, *PC Port*, *recomp* | Outros ports recompilados |
 
-- Jogos instalados pela **Steam** e pela **Epic Games** aparecem sozinhos (com o tempo de jogo registrado na Steam).
 - Ignora executáveis auxiliares (instaladores, crash reporters, ferramentas) e escolhe o executável certo de cada jogo. Dá para trocar em **Editar**.
+
+### Todas as suas lojas
+
+Os jogos instalados por estas lojas aparecem sozinhos em **Jogos de PC** (cada uma pode ser desligada em **Configurações → Lojas**):
+
+| Loja | Como o jogo abre |
+|---|---|
+| **Steam** | pela Steam (inclui o tempo de jogo registrado na Steam) |
+| **Epic Games** | pela Epic Games Launcher |
+| **GOG Galaxy** | direto pelo executável do jogo (com as capas da GOG) |
+| **Ubisoft Connect** | pelo Ubisoft Connect |
+| **EA app** | pelo executável do jogo |
+| **Battle.net** | pelo executável do jogo |
+| **Xbox / Game Pass** | pelo app do Xbox (jogos nas pastas `XboxGames`) |
 
 ### Página de cada jogo
 ![Jogo](docs/screenshots/jogo.png)
 
-- **Jogar**, **tempo de jogo**, **última vez jogado** e **sessões**.
-- O tempo é contado enquanto qualquer processo da pasta do jogo estiver aberto — funciona com ports que abrem outro processo e até quando o jogo é aberto fora do launcher.
-- **Capas e imagens de fundo automáticas**: arte do próprio jogo, loja Steam, Wikipédia (capa da caixa) e [SteamGridDB](https://www.steamgriddb.com) (chave opcional, grátis). Dá para trocar por outra opção ou por qualquer imagem do PC.
+- **Sobre o jogo**: descrição, gêneros, desenvolvedora, publicadora, ano de lançamento e **nota do Metacritic**, buscados na loja Steam ou na Wikipédia/Wikidata (inclusive para os ports recompilados).
+- **Histórico de sessões**: cada vez que você joga fica registrada, com data, horário e duração.
+- **Tempo de jogo** e **última vez jogado**. O tempo é contado enquanto qualquer processo da pasta do jogo estiver aberto — funciona com ports que abrem outro processo e até quando o jogo é aberto fora do launcher.
+- **Capas e imagens de fundo automáticas**: arte do próprio jogo, loja Steam, GOG, Wikipédia (capa da caixa) e [SteamGridDB](https://www.steamgriddb.com) (chave opcional, grátis). Dá para trocar por outra opção ou por qualquer imagem do PC.
 - Favoritar, ocultar, renomear, mudar a categoria, escolher o executável e passar argumentos de inicialização.
+
+### Estatísticas
+![Estatísticas](docs/screenshots/estatisticas.png)
+
+Seu tempo de jogo em números: tempo total, últimos 7 e 30 dias, sessões e duração média, **gráfico de horas jogadas por dia**, **jogos mais jogados**, tempo **por plataforma** e **por categoria**, e as **sessões recentes**.
+
+### Modo TV e controle
+![Modo TV](docs/screenshots/modo-tv.png)
+
+Tela cheia feita para o sofá: o fundo muda com o jogo em foco, com abas (Todos, Recentes, Recompilados, Jogos de PC, Favoritos), informações do jogo e uma fileira de capas.
+
+| Controle | Ação |
+|---|---|
+| Direcional / analógico | Navegar |
+| **A** | Abrir / jogar |
+| **B** | Voltar / sair do Modo TV |
+| **X** | Favoritar |
+| **Y** | Mais detalhes |
+| **LB / RB** | Trocar de aba |
+| **Menu (☰)** | Entrar ou sair do Modo TV |
+
+Abra pelo botão **Modo TV** na barra lateral, pela tecla **F11** ou pelo botão Menu do controle. O controle também navega pela biblioteca normal, e o app pode **abrir direto no Modo TV** (Configurações → Controle e Modo TV). Para não atrapalhar, o app só responde ao controle quando a janela dele está em foco.
 
 ### Grade ou lista
 ![Lista](docs/screenshots/lista.png)
 
-Alterne entre **grade** de capas (com tamanho ajustável) e **lista** com plataforma, categoria, tempo de jogo e última vez — clique no cabeçalho para ordenar.
+Alterne entre **grade** de capas (com tamanho ajustável) e **lista** com plataforma, categoria, tempo de jogo e última vez — clique no cabeçalho para ordenar. O app lembra suas escolhas.
 
 ### Temas
-![Tema Neon](docs/screenshots/jogo-neon.png)
+![Tema Cyberpunk](docs/screenshots/tema-cyberpunk.png)
 
-Dois temas em **Configurações → Aparência**: **Sóbrio** (cinzas neutros) e **Neon** (roxo e ciano, com o destaque *Continue jogando*).
+Três temas em **Configurações → Aparência**:
+
+- **Sóbrio** — cinzas neutros, visual de launcher de desktop.
+- **Neon** — roxo e ciano, com o destaque *Continue jogando* no topo da biblioteca.
+- **Cyberpunk** — amarelo neon, cantos cortados, scanlines, fundo com a arte do jogo em foco e efeitos de glitch.
 
 ### Bandeja do sistema
 Fechar a janela **minimiza o LZ Launcher para a bandeja**, perto do relógio — ele continua contando o tempo de jogo. Clique duas vezes no ícone para voltar ou em **Sair** para fechar de vez. Dá para desligar nas configurações.
 
 ## Aviso
 
-O LZ Launcher **não inclui jogos** nem arquivos de jogos: ele só organiza e abre o que já está no seu PC. Os ports recompilados precisam dos seus próprios dumps, conforme as instruções de cada port. O app **nunca altera** nada dentro das pastas dos jogos. Projeto da comunidade, sem relação com Sony, Microsoft, Valve ou Epic Games.
+O LZ Launcher **não inclui jogos** nem arquivos de jogos: ele só organiza e abre o que já está no seu PC. Os ports recompilados precisam dos seus próprios dumps, conforme as instruções de cada port. O app **nunca altera** nada dentro das pastas dos jogos. Projeto da comunidade, sem relação com Sony, Microsoft, Nintendo, Valve, Epic Games, GOG, Ubisoft, EA ou Blizzard.
 
 ## Créditos
 
@@ -80,7 +124,7 @@ O LZ Launcher **não inclui jogos** nem arquivos de jogos: ele só organiza e ab
 - [psutil](https://github.com/giampaolo/psutil) — contagem do tempo de jogo
 - [pystray](https://github.com/moses-palmer/pystray) — ícone na bandeja
 - [Pillow](https://github.com/python-pillow/Pillow) e [icoextract](https://github.com/jlu5/icoextract) — imagens e ícones dos jogos
-- Capas: loja Steam, [Wikipédia](https://www.wikipedia.org) e [SteamGridDB](https://www.steamgriddb.com)
+- Capas e informações: loja Steam, GOG, [Wikipédia](https://www.wikipedia.org), [Wikidata](https://www.wikidata.org) e [SteamGridDB](https://www.steamgriddb.com)
 - [PyInstaller](https://pyinstaller.org) e [Inno Setup](https://jrsoftware.org/isinfo.php) — executável e instalador
 
 ## Licença

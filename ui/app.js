@@ -16,8 +16,8 @@ const ICON = {
   link: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
 };
 
-const THEMES = ["sober", "neon", "cyberpunk", "nintendo", "playstation", "xbox"];
-const AMBIENT_THEMES = ["playstation", "xbox", "cyberpunk"];
+const THEMES = ["sober", "neon", "cyberpunk"];
+const AMBIENT_THEMES = ["cyberpunk"];
 
 const state = {
   lib: { games: [], folders: [], settings: {} },
@@ -169,7 +169,7 @@ window.coverError = (img) => {
   box.insertAdjacentHTML("afterbegin", `<span class="ph">${esc(name)}</span>`);
 };
 
-// Fundo dinâmico (temas PlayStation, Xbox e Cyberpunk): a arte do jogo em foco
+// Fundo dinâmico (tema Cyberpunk): a arte do jogo em foco
 let ambientId = null;
 function setAmbient(g) {
   if (!g || ambientId === g.id) return;
@@ -698,9 +698,6 @@ function themeOptions() {
     ["sober", t("Sóbrio"), t("Cinzas neutros, visual de launcher de desktop")],
     ["neon", "Neon", t("Roxo e ciano com destaque “Continue jogando”")],
     ["cyberpunk", "Cyberpunk", t("Amarelo neon, cantos cortados, scanlines e falhas de glitch")],
-    ["nintendo", "Nintendo", t("Tema claro, peças arredondadas e blocos quadrados como no Switch")],
-    ["playstation", "PlayStation", t("Barra no topo, blocos quadrados e fundo que muda com o jogo em foco")],
-    ["xbox", "Xbox", t("Barra de ícones lateral, blocos quadrados e destaques em verde")],
   ];
 }
 
@@ -1223,7 +1220,7 @@ function bindEvents() {
   $("#d-edit").onclick = () => editModal(state.current);
   $("#d-info-refresh").onclick = async () => { await api("refresh_info", state.current); toast(t("Atualizando informações…")); };
 
-  // fundo dinâmico nos temas PlayStation / Xbox / Cyberpunk
+  // fundo dinâmico no tema Cyberpunk
   const ambient = e => {
     if (!AMBIENT_THEMES.includes(theme())) return;
     const c = e.target.closest(".card, .row");

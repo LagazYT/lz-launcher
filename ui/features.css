@@ -109,15 +109,6 @@
 .tprev-cyberpunk .tp-side { background: #0d0d14; border-right: 2px solid #fcee0a; }
 .tprev-cyberpunk i:not(.tp-side) { background: #fcee0a; clip-path: polygon(0 0, 70% 0, 100% 25%, 100% 100%, 30% 100%, 0 75%); }
 .tprev-cyberpunk .tp-b { background: #00f0ff; } .tprev-cyberpunk .tp-c { background: #ff003c; }
-.tprev-nintendo { background: #ebebeb; } .tprev-nintendo .tp-side { left: 0; right: 0; width: auto; height: 9px; background: #fff; border-bottom: 1px solid #d0d0d0; }
-.tprev-nintendo i:not(.tp-side) { top: 18px; width: 13px; height: 13px; background: #fff; border-radius: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
-.tprev-nintendo .tp-a { background: #e60012; outline: 2px solid #00c3e3; outline-offset: 1px; }
-.tprev-playstation { background: linear-gradient(160deg, #123a8a, #050a18 70%); } .tprev-playstation .tp-side { left: 0; right: 0; width: auto; height: 8px; background: transparent; border-bottom: 1px solid rgba(255, 255, 255, .25); }
-.tprev-playstation i:not(.tp-side) { top: 20px; width: 12px; height: 12px; background: rgba(255, 255, 255, .35); border-radius: 3px; }
-.tprev-playstation .tp-a { width: 15px; height: 15px; top: 18px; left: 18px; background: #fff; }
-.tprev-xbox { background: radial-gradient(circle at 0 0, rgba(16, 124, 16, .5), #101010 60%); } .tprev-xbox .tp-side { width: 8px; background: #0a0a0a; box-shadow: inset 0 14px 0 -8px #107c10; }
-.tprev-xbox i:not(.tp-side) { top: 15px; width: 14px; height: 14px; background: #2a2a2a; border-radius: 1px; }
-.tprev-xbox .tp-a { background: #107c10; outline: 1.5px solid #fff; }
 
 /* ---------- Foco do controle ---------- */
 body.pad-mode :focus { outline: 3px solid var(--accent) !important; outline-offset: 3px; }
