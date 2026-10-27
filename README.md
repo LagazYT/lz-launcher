@@ -4,7 +4,7 @@
 
 **Criado por Lagaz** · Windows 10/11 64-bit · Português · English · Español
 
-Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC** de todas as lojas. Ele reconhece cada jogo sozinho, mostra a **capa correta** e as **informações do jogo**, conta o **tempo de jogo** e abre tudo com um clique — ou com o **controle**, no **Modo TV**.
+Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC** de todas as lojas. Ele reconhece cada jogo sozinho, mostra a **capa correta** e as **informações do jogo**, conta o **tempo de jogo** e abre tudo com um clique — ou com o **controle**, no **Modo TV**, direto do sofá.
 
 ![Biblioteca](docs/screenshots/biblioteca.png)
 
@@ -83,19 +83,36 @@ Seu tempo de jogo em números: tempo total, últimos 7 e 30 dias, sessões e dur
 ### Modo TV e controle
 ![Modo TV](docs/screenshots/modo-tv.png)
 
-Tela cheia feita para o sofá: o fundo muda com o jogo em foco, com abas (Todos, Recentes, Recompilados, Jogos de PC, Favoritos), informações do jogo e uma fileira de capas.
+Tela cheia feita para o sofá, para usar o PC na TV só com o controle:
+
+- **Fileiras por categoria** como num console: *Jogando agora*, *Continue jogando*, *Favoritos*, *Recompilados*, *Jogos de PC*, *Mais jogados* e *Todos os jogos*.
+- **Trailer no fundo**: depois de alguns segundos parado num jogo da Steam, o trailer dele toca sem som atrás das informações.
+- **Prévia das sessões** do jogo em foco (últimas 2 semanas), além de tempo de jogo, gêneros, nota do Metacritic e descrição.
+- **Sons de navegação** e **fundo animado** nas cores do tema (partículas, scanlines ou céu com estrelas cadentes).
+- **Bateria do controle** sem fio no canto da tela.
 
 | Controle | Ação |
 |---|---|
-| Direcional / analógico | Navegar |
-| **A** | Abrir / jogar |
-| **B** | Voltar / sair do Modo TV |
+| Direcional / analógico | Navegar entre os jogos e as fileiras |
+| **A** | Jogar |
+| **B** | Voltar / limpar a busca / sair do Modo TV |
 | **X** | Favoritar |
-| **Y** | Mais detalhes |
-| **LB / RB** | Trocar de aba |
-| **Menu (☰)** | Entrar ou sair do Modo TV |
+| **Y** | Buscar com teclado na tela |
+| **LB / RB** | Pular de fileira |
+| **☰ (Menu)** | Opções: ordem, tamanho das capas e do texto, trailers, sons, fundo animado |
+| **⧉ (View)** | Menu rápido: volume, sair do Modo TV, fechar o app, suspender, reiniciar ou desligar o PC |
+| **Segurar View + ☰** (ou o botão Xbox) | Fecha o jogo aberto e volta ao Modo TV |
 
-Abra pelo botão **Modo TV** na barra lateral, pela tecla **F11** ou pelo botão Menu do controle. O controle também navega pela biblioteca normal, e o app pode **abrir direto no Modo TV** (Configurações → Controle e Modo TV). Para não atrapalhar, o app só responde ao controle quando a janela dele está em foco.
+<p>
+  <img src="docs/screenshots/modo-tv-busca.png" width="49%" alt="Busca com teclado na tela">
+  <img src="docs/screenshots/modo-tv-menu.png" width="49%" alt="Menu rápido">
+</p>
+
+Quando você sai de um jogo aberto pelo Modo TV, o LZ Launcher **volta sozinho para a frente**, já no Modo TV. Abra pelo botão **Modo TV** na barra lateral, pela tecla **F11** ou pelo botão Menu do controle. O controle também navega pela biblioteca normal e, para não atrapalhar, o app só responde a ele quando a janela está em foco.
+
+### Iniciar com o Windows
+
+Em **Configurações → Inicialização**, o LZ Launcher pode abrir junto com o Windows — escondido na bandeja, contando o tempo de jogo, ou **direto no Modo TV**, ideal para um PC ligado na TV.
 
 ### Grade ou lista
 ![Lista](docs/screenshots/lista.png)
@@ -103,13 +120,19 @@ Abra pelo botão **Modo TV** na barra lateral, pela tecla **F11** ou pelo botão
 Alterne entre **grade** de capas (com tamanho ajustável) e **lista** com plataforma, categoria, tempo de jogo e última vez — clique no cabeçalho para ordenar. O app lembra suas escolhas.
 
 ### Temas
-![Tema Cyberpunk](docs/screenshots/tema-cyberpunk.png)
+![Tema Black Midnight](docs/screenshots/tema-midnight.png)
 
-Três temas em **Configurações → Aparência**:
+Quatro temas em **Configurações → Aparência** — cada um muda bem mais que as cores:
 
 - **Sóbrio** — cinzas neutros, visual de launcher de desktop.
 - **Neon** — roxo e ciano, com o destaque *Continue jogando* no topo da biblioteca.
 - **Cyberpunk** — amarelo neon, cantos cortados, scanlines, fundo com a arte do jogo em foco e efeitos de glitch.
+- **Black Midnight** — preto absoluto, céu estrelado com brilho da lua, barra lateral de vidro flutuante, títulos serifados e reflexo de luar nas capas.
+
+<p>
+  <img src="docs/screenshots/tema-cyberpunk.png" width="49%" alt="Tema Cyberpunk">
+  <img src="docs/screenshots/jogo-midnight.png" width="49%" alt="Tema Black Midnight na página do jogo">
+</p>
 
 ### Bandeja do sistema
 Fechar a janela **minimiza o LZ Launcher para a bandeja**, perto do relógio — ele continua contando o tempo de jogo. Clique duas vezes no ícone para voltar ou em **Sair** para fechar de vez. Dá para desligar nas configurações.
