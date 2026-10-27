@@ -33,6 +33,7 @@ class PlayTracker:
         self.running: dict[str, dict] = {}  # id -> {"start": t, "pids": [...]}
         self._stop = threading.Event()
         self._pending: dict[str, float] = {}  # jogos iniciados pelo app aguardando processo
+        self.on_session_end = None  # chamado com o id do jogo quando ele fecha
         self.thread = threading.Thread(target=self._loop, name="tracker", daemon=True)
 
     def start(self):
@@ -124,6 +125,8 @@ class PlayTracker:
                             g["last_session"] = now - info["start"]
                             g.pop("open_session", None)
                             add_session(g, info["start"], now)
+                        if self.on_session_end:
+                            threading.Thread(target=self.on_session_end, args=(gid,), daemon=True).start()
                         changed = True
                 for gid, t in list(self._pending.items()):
                     if now - t > 120:

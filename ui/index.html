@@ -6,6 +6,7 @@
 <title>LZ Launcher</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="features.css">
+<link rel="stylesheet" href="tv.css">
 <link rel="stylesheet" href="themes.css">
 <link rel="stylesheet" href="theme-cyberpunk.css">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("lz_theme") || "sober"; } catch (e) { }</script>
@@ -126,16 +127,18 @@
 
   <!-- Modo TV -->
   <section id="tv" class="tv" hidden>
-    <div class="tv-bg"><img alt=""><img alt=""></div>
+    <div class="tv-bg"><img alt=""><img alt=""><video id="tv-video" muted loop playsinline></video></div>
+    <canvas id="tv-fx" class="tv-fx" hidden></canvas>
     <div class="tv-shade"></div>
     <header class="tv-top">
       <div class="tv-logo"><img src="icon.png" alt=""><span>LZ Launcher</span></div>
-      <nav class="tv-tabs" id="tv-tabs"></nav>
-      <div class="tv-right"><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="tv-search" id="tv-search-chip"></div>
+      <div class="tv-right"><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     </header>
     <div class="tv-info" id="tv-info"></div>
-    <div class="tv-shelf" id="tv-shelf"></div>
+    <div class="tv-rows" id="tv-rows"></div>
     <footer class="tv-hints" id="tv-hints"></footer>
+    <div class="tv-overlay" id="tv-overlay" hidden></div>
   </section>
 
   <div id="modal" class="modal" hidden>
@@ -151,5 +154,6 @@
 </div>
 <script src="i18n.js"></script>
 <script src="app.js"></script>
+<script src="tv.js"></script>
 </body>
 </html>

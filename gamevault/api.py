@@ -1,5 +1,6 @@
 """Funções chamadas pela interface (window.pywebview.api.*)."""
 import os
+import threading
 import subprocess
 from pathlib import Path
 
@@ -195,6 +196,12 @@ class Api:
             self._lib.rescan_async()
         if self._lib.lang() != before_lang:
             self._lib.refresh_info()  # descrições dos jogos no idioma novo
+        if "start_with_windows" in (settings or {}):
+            from .system import set_start_with_windows
+            if not set_start_with_windows(bool(st["start_with_windows"])):
+                st["start_with_windows"] = False
+                self._lib.store.save()
+                return False
         return True
 
     def refresh_info(self, gid=None):
@@ -202,6 +209,30 @@ class Api:
         return True
 
     # --- Modo TV ---------------------------------------------------------------
+    def set_tv(self, on):
+        """A interface entrou/saiu do Modo TV: tela cheia e lembra o estado."""
+        self._lib.tv_active = bool(on)
+        return self.set_fullscreen(on)
+
+    def get_trailer(self, gid):
+        return self._lib.trailer_url(gid)
+
+    def system_volume(self, action):
+        from .system import volume
+        return volume(action)
+
+    def system_power(self, action):
+        from .system import power
+        if action not in ("sleep", "restart", "shutdown"):
+            return False
+        return power(action)
+
+    def quit_app(self):
+        if getattr(self, "_quit", None):
+            threading.Thread(target=self._quit, daemon=True).start()
+            return True
+        return False
+
     def set_fullscreen(self, on):
         w = self._window
         if not w:

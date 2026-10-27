@@ -165,13 +165,3 @@
 [data-theme="cyberpunk"] .folder-list, [data-theme="cyberpunk"] .radio, [data-theme="cyberpunk"] .theme-opt, [data-theme="cyberpunk"] .path, [data-theme="cyberpunk"] .art-opt { border-radius: 0; }
 [data-theme="cyberpunk"] .toast { border-radius: 0; clip-path: var(--chamfer-sm); border-left: 3px solid var(--accent); text-transform: uppercase; letter-spacing: .8px; font-size: 12px; }
 [data-theme="cyberpunk"] .tip { border-radius: 0; border-color: var(--accent); }
-
-/* Modo TV */
-[data-theme="cyberpunk"] .tv { --tv-on-bg: #fcee0a; --tv-on-fg: #000; --tv-radius: 0; --tv-ring: #fcee0a; font-family: "Bahnschrift", "Segoe UI", sans-serif; }
-[data-theme="cyberpunk"] .tv-tab { border-radius: 0; text-transform: uppercase; letter-spacing: 2px; clip-path: var(--chamfer-sm); }
-[data-theme="cyberpunk"] .tv-card .cover { clip-path: var(--chamfer); }
-[data-theme="cyberpunk"] .tv-card.focus .cover { box-shadow: inset 0 0 0 4px var(--accent); }
-[data-theme="cyberpunk"] .tv-info h1 { text-transform: uppercase; letter-spacing: 3px; animation: cp-text 4s infinite; }
-[data-theme="cyberpunk"] .tv-chip { border-radius: 0; background: rgba(0, 0, 0, .6); border: 1px solid var(--cy); color: var(--cy); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
-[data-theme="cyberpunk"] .tv-btn { border-radius: 0; clip-path: var(--chamfer-sm); text-transform: uppercase; letter-spacing: 2px; }
-[data-theme="cyberpunk"] .tv::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3; background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 3px); }

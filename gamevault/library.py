@@ -37,6 +37,10 @@ class Library:
         self.art_busy = False
         self._art_lock = threading.Lock()
         self._local_tokens: dict[str, str] = {}
+        self.events: list[dict] = []   # avisos do programa para a interface (lidos no status)
+        self.tv_active = False         # a interface está no Modo TV
+        self._trailers: dict[str, str | None] = {}
+        self.pad = None                # PadWatcher (controle XInput)
 
     def lang(self) -> str:
         return resolve_lang(self.store.settings.get("language"))
@@ -244,6 +248,22 @@ class Library:
                     self.store.touch()
             self.store.save()
         threading.Thread(target=run, daemon=True).start()
+
+    def trailer_url(self, gid: str) -> str | None:
+        """Trailer do jogo na Steam (o link expira, então fica só em memória)."""
+        if gid in self._trailers:
+            return self._trailers[gid]
+        g = self.store.games.get(gid) or {}
+        appid = g.get("steam_appid") or g.get("steam_appid_guess")
+        url = None
+        if appid:
+            from .info import steam_trailer
+            try:
+                url = steam_trailer(int(appid))
+            except Exception:
+                url = None
+        self._trailers[gid] = url
+        return url
 
     def image_path(self, gid: str, kind: str) -> str | None:
         g = self.store.games.get(gid)
@@ -458,4 +478,15 @@ class Library:
             "art_busy": self.art_busy,
             "running": {gid: time.time() - r["start"] for gid, r in self.tracker.running.items()},
             "update": self.updater.info(),
+            "events": self.pop_events(),
+            "pad": {"connected": bool(self.pad and self.pad.connected),
+                    "battery": self.pad.battery if self.pad else None},
         }
+
+    def push_event(self, kind: str, **data):
+        self.events.append({"type": kind, **data})
+        del self.events[:-20]
+
+    def pop_events(self) -> list:
+        out, self.events = self.events, []
+        return out

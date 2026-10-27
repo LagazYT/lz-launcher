@@ -35,6 +35,7 @@ const state = {
   updateDismissed: false,
   updateToastShown: false,
   tv: false,
+  pad: null,
 };
 
 // Preferências da interface (tamanho das capas, grade/lista, ordem, tamanho das janelas...).
@@ -745,9 +746,17 @@ function settingsModal() {
     </div>
 
     <div class="sep"></div>
-    <div class="group-title">${t("Controle e Modo TV")}</div>
+    <div class="group-title">${t("Inicialização")}</div>
+    ${chk("start_with_windows", t("Iniciar com o Windows"), t("Abre o LZ Launcher ao ligar o PC, escondido na bandeja (ou direto no Modo TV, se a opção abaixo estiver ligada)"))}
     ${chk("tv_on_start", t("Abrir no Modo TV"), t("O app já abre em tela cheia, pronto para usar com controle"))}
-    <p class="hint">${t("Com um controle conectado: direcional ou analógico para navegar, A para abrir/jogar, B para voltar, X para favoritar, LB/RB para trocar de aba e Menu (☰) para entrar ou sair do Modo TV.")}</p>
+
+    <div class="sep"></div>
+    <div class="group-title">${t("Controle e Modo TV")}</div>
+    ${chk("tv_return", t("Voltar ao Modo TV ao fechar o jogo"), t("Quando você sai de um jogo aberto pelo Modo TV, o LZ Launcher volta para a frente"))}
+    ${chk("tv_trailers", t("Trailers no fundo"), t("Depois de alguns segundos num jogo da Steam, o trailer dele toca sem som no fundo"))}
+    ${chk("tv_sounds", t("Sons de navegação"))}
+    ${chk("tv_fx", t("Fundo animado"), t("Partículas e efeitos leves nas cores do tema"))}
+    <p class="hint">${t("Controle: direcional ou analógico para navegar, A para jogar, B para voltar, X para favoritar, Y para buscar, ☰ para as opções e ⧉ (View) para o menu rápido (volume, desligar o PC…). Segure View + ☰ (ou o botão Xbox) por 2 segundos para fechar o jogo aberto e voltar ao Modo TV.")}</p>
 
     <div class="sep"></div>
     <div class="group-title">${t("Atualizações")}</div>
@@ -781,7 +790,11 @@ function settingsModal() {
   const body = $("#modal-body");
   body.onchange = async e => {
     const el = e.target;
-    if (el.dataset.set) { s[el.dataset.set] = el.checked; await api("save_settings", { [el.dataset.set]: el.checked }); }
+    if (el.dataset.set) {
+      s[el.dataset.set] = el.checked;
+      const ok = await api("save_settings", { [el.dataset.set]: el.checked });
+      if (ok === false && el.dataset.set === "start_with_windows") { el.checked = s.start_with_windows = false; toast(t("Não foi possível ativar o início com o Windows."), "error"); }
+    }
     if (el.name === "theme") { s.theme = el.value; applyTheme(el.value); ambientId = null; render(); await api("save_settings", { theme: el.value }); }
     if (el.dataset.fmode) { await api("set_folder_mode", el.dataset.fmode, el.value); toast(t("Reclassificando os jogos…")); }
     if (el.id === "set-lang") {
@@ -940,120 +953,8 @@ async function installUpdate() {
   if (r && !r.ok && r.error) toast(r.error, "error");
 }
 
-/* ---------------- Modo TV ---------------- */
-const TV = { tab: 0, index: 0, expanded: false };
-function tvTabs() {
-  return [
-    { id: "all", label: t("Todos"), filter: g => !g.hidden },
-    { id: "recent", label: t("Recentes"), filter: g => !g.hidden && g.last_played, sort: "recent" },
-    { id: "recompiled", label: t("Recompilados"), filter: g => !g.hidden && g.kind === "recompiled" },
-    { id: "normal", label: t("Jogos de PC"), filter: g => !g.hidden && g.kind === "normal" },
-    { id: "favorites", label: t("Favoritos"), filter: g => !g.hidden && g.favorite },
-  ];
-}
-function tvList() {
-  const tab = tvTabs()[TV.tab];
-  return sortGames(state.lib.games.filter(tab.filter), tab.sort || (TV.tab === 0 ? "recent" : "name"));
-}
-
-function enterTV() {
-  if (state.tv) return;
-  state.tv = true;
-  closeModal();
-  $("#tv").hidden = false;
-  document.body.classList.add("tv-on");
-  api("set_fullscreen", true).catch(() => { });
-  TV.index = 0; TV.expanded = false;
-  $("#tv-shelf")._html = null;
-  renderTV();
-  tickClock();
-}
-function exitTV() {
-  if (!state.tv) return;
-  state.tv = false;
-  $("#tv").hidden = true;
-  document.body.classList.remove("tv-on");
-  api("set_fullscreen", false).catch(() => { });
-}
-function tickClock() {
-  if (!state.tv) return;
-  $("#tv-clock").textContent = new Date().toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" });
-  setTimeout(tickClock, 15000);
-}
-
-function renderTV() {
-  if (!state.tv) return;
-  const tabs = tvTabs();
-  $("#tv-tabs").innerHTML = tabs.map((tb, i) => `<button class="tv-tab ${i === TV.tab ? "on" : ""}" data-tvtab="${i}">${tb.label}</button>`).join("");
-  const list = tvList();
-  TV.index = Math.max(0, Math.min(TV.index, list.length - 1));
-  const shelf = $("#tv-shelf");
-  const html = list.map((g, i) => `<div class="tv-card" data-tvi="${i}" data-name="${esc(g.name)}">${coverHTML(g)}${isRunning(g.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${g.favorite ? '<span class="tv-fav">★</span>' : ""}</div></div>`).join("")
-    || `<div class="tv-empty">${t("Nenhum jogo nesta aba.")}</div>`;
-  if (shelf._html !== html) { shelf.innerHTML = html; shelf._html = html; }
-  $$(".tv-card", shelf).forEach((c, i) => c.classList.toggle("focus", i === TV.index));
-  const focused = $(".tv-card.focus", shelf);
-  if (focused) focused.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-
-  const g = list[TV.index];
-  const info = $("#tv-info");
-  if (!g) { info.innerHTML = ""; return; }
-  // fundo com transição suave entre dois quadros
-  const src = g.hero || g.cover || "";
-  const bgs = $$(".tv-bg img");
-  const cur = bgs.find(b => b.classList.contains("on"));
-  if (!cur || cur.dataset.src !== src) {
-    const next = bgs.find(b => b !== cur) || bgs[0];
-    next.dataset.src = src;
-    next.classList.toggle("blurred", !g.hero);
-    if (src) next.src = src; else next.removeAttribute("src");
-    next.classList.add("on"); if (cur) cur.classList.remove("on");
-  }
-  const running = isRunning(g.id);
-  const i = g.info || {};
-  const chips = [
-    `<span class="tv-chip">${esc(platformLabel(g))}</span>`,
-    g.kind === "recompiled" ? `<span class="tv-chip">${t("Recompilado")}</span>` : "",
-    i.year ? `<span class="tv-chip">${i.year}</span>` : "",
-    i.metacritic ? `<span class="tv-chip meta">Metacritic ${i.metacritic}</span>` : "",
-    ...(i.genres || []).slice(0, 2).map(x => `<span class="tv-chip">${esc(x)}</span>`),
-  ].join("");
-  info.classList.toggle("expanded", TV.expanded);
-  info.innerHTML = `
-    <h1>${esc(g.name)}</h1>
-    <div class="tv-chips">${chips}</div>
-    <div class="tv-stats">
-      <div><small>${t("Tempo de jogo")}</small><b>${fmtPlaytime(g.playtime)}</b></div>
-      <div><small>${running ? t("Sessão atual") : t("Última vez")}</small><b>${running ? fmtClock(state.running[g.id]) : fmtAgo(g.last_played)}</b></div>
-    </div>
-    ${i.description ? `<p class="tv-desc">${esc(i.description)}</p>` : ""}
-    <div class="tv-actions"><span class="tv-btn primary"><i class="gp a">A</i>${running ? t("Jogando agora") : t("Jogar")}</span></div>`;
-  $("#tv-hints").innerHTML = [
-    ["a", "A", t("Jogar")], ["x", "X", g.favorite ? t("Remover favorito") : t("Favoritar")],
-    ["y", "Y", TV.expanded ? t("Menos detalhes") : t("Mais detalhes")], ["lb", "LB RB", t("Abas")], ["b", "B", t("Sair do Modo TV")],
-  ].map(([c, k, label]) => `<span><i class="gp ${c}">${k}</i>${label}</span>`).join("");
-}
-
-function tvAction(act) {
-  const list = tvList();
-  const g = list[TV.index];
-  switch (act) {
-    case "left": TV.index = Math.max(0, TV.index - 1); TV.expanded = false; break;
-    case "right": TV.index = Math.min(list.length - 1, TV.index + 1); TV.expanded = false; break;
-    case "up": TV.expanded = true; break;
-    case "down": TV.expanded = false; break;
-    case "lb": TV.tab = (TV.tab + tvTabs().length - 1) % tvTabs().length; TV.index = 0; break;
-    case "rb": TV.tab = (TV.tab + 1) % tvTabs().length; TV.index = 0; break;
-    case "a": if (g) playGame(g.id); break;
-    case "x": if (g) toggleFav(g.id); break;
-    case "y": TV.expanded = !TV.expanded; break;
-    case "b": case "start": case "select": exitTV(); return;
-  }
-  renderTV();
-}
-
 /* ---------------- Controle (gamepad) ---------------- */
-const PAD_BUTTONS = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right" };
+const PAD_BUTTONS = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right", 16: "guide" };
 const pad = { prev: {}, next: {}, announced: false };
 
 function startGamepad() {
@@ -1088,7 +989,7 @@ function startGamepad() {
 
 function padAction(act) {
   if (state.tv) { tvAction(act); return; }
-  if (act === "start" || act === "select") { enterTV(); return; }
+  if (act === "start" || act === "select" || act === "guide") { enterTV(); return; }
   if (act === "b") {
     if (!$("#modal").hidden) closeModal();
     else if (state.current) closeDetails();
@@ -1154,7 +1055,7 @@ async function reload() {
   state.lib = lib;
   state.revision = lib.revision;
   const lang = QP.get("lang") || lib.lang || "pt";
-  if (lang !== LANG) { setLang(lang); $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = ""; $("#stats-body")._key = null; $("#tv-shelf")._html = null; }
+  if (lang !== LANG) { setLang(lang); $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = ""; $("#stats-body")._key = null; tvLangChanged(); }
   applyTheme(QP.get("theme") || lib.settings.theme);
   render();
 }
@@ -1165,6 +1066,9 @@ async function poll() {
     const s = await api("status");
     state.running = s.running || {};
     if (s.update) onUpdateInfo(s.update);
+    state.pad = s.pad || null;
+    (s.events || []).forEach(tvHandleEvent);
+    if (state.tv) renderTVHeader();
     $("#scanbar").hidden = !s.scanning;
     $("#scan-msg").textContent = s.scan_message || t("Procurando jogos…");
     $("#btn-rescan").classList.toggle("spin", !!(s.scanning || s.art_busy));
@@ -1231,15 +1135,7 @@ function bindEvents() {
   $("#grid").addEventListener("focusin", ambient);
   $("#list").addEventListener("focusin", ambient);
 
-  // Modo TV com mouse
-  $("#tv").addEventListener("click", e => {
-    const tab = e.target.closest("[data-tvtab]");
-    if (tab) { TV.tab = +tab.dataset.tvtab; TV.index = 0; renderTV(); return; }
-    const card = e.target.closest("[data-tvi]");
-    if (card) { const i = +card.dataset.tvi; if (i === TV.index) tvAction("a"); else { TV.index = i; renderTV(); } return; }
-    if (e.target.closest("#tv-exit")) exitTV();
-  });
-  $("#tv-shelf").addEventListener("wheel", e => { e.preventDefault(); tvAction(e.deltaY > 0 || e.deltaX > 0 ? "right" : "left"); }, { passive: false });
+  bindTV();
 
   document.addEventListener("click", e => {
     if (!e.target.closest(".menu-wrap")) $("#menu-add").hidden = true;
@@ -1274,12 +1170,7 @@ function bindEvents() {
   });
   document.addEventListener("mousedown", () => document.body.classList.remove("pad-mode"));
   document.addEventListener("keydown", e => {
-    if (state.tv) {
-      const map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", Enter: "a", " ": "a", Escape: "b", Backspace: "b", f: "x", i: "y", q: "lb", e: "rb", F11: "b" };
-      const act = map[e.key];
-      if (act) { e.preventDefault(); tvAction(act); }
-      return;
-    }
+    if (state.tv) { tvKey(e); return; }
     if (e.key === "F11") { e.preventDefault(); enterTV(); return; }
     if (e.key === "Escape") {
       if (!$("#modal").hidden) closeModal();
@@ -1314,6 +1205,8 @@ async function boot() {
     if (g) openDetails(g.id);
   }
   if (QP.get("tv") || (state.lib.settings.tv_on_start && !QP.get("page") && !QP.get("game"))) enterTV();
+  if (state.tv && QP.get("tvov")) { if (QP.get("q")) TV.query = QP.get("q"); openOverlay(QP.get("tvov")); }
+  if (QP.get("settings")) settingsModal();
   poll();
 }
 

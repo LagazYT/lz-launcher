@@ -175,6 +175,20 @@ def from_wikipedia(name: str, lang: str) -> dict | None:
     }
 
 
+def steam_trailer(appid: int) -> str | None:
+    """Link do trailer da loja Steam (streaming HLS, que o WebView2 toca direto)."""
+    r = _get("https://store.steampowered.com/api/appdetails", params={"appids": appid, "filters": "movies"})
+    try:
+        movies = r.json()[str(appid)]["data"].get("movies") or []
+    except Exception:
+        return None
+    for m in movies:
+        url = m.get("hls_h264") or (m.get("mp4") or {}).get("max") or (m.get("webm") or {}).get("max")
+        if url:
+            return url
+    return None
+
+
 def fetch_info(name: str, steam_appid: int | None, lang: str) -> dict | None:
     info = None
     net_error = False
