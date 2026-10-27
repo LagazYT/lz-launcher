@@ -106,3 +106,31 @@ def bring_to_front(title: str = APP_NAME) -> bool:
     user32.BringWindowToTop(hwnd)
     time.sleep(0.05)
     return ok
+
+
+# --- tela cheia sem moldura ------------------------------------------------------------
+def cover_monitor(hwnd) -> bool:
+    """Estica a janela 1 px além de cada borda do monitor.
+
+    Em tela cheia a janela do WebView2 mantém uma moldura cinza de 1 px nas bordas; deixando a
+    janela um pouco maior que a tela, essa moldura fica fora da área visível.
+    """
+    if not user32 or not hwnd:
+        return False
+    from ctypes import wintypes
+
+    class RECT(ctypes.Structure):
+        _fields_ = [("l", ctypes.c_long), ("t", ctypes.c_long), ("r", ctypes.c_long), ("b", ctypes.c_long)]
+
+    class MONITORINFO(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", RECT), ("rcWork", RECT), ("dwFlags", wintypes.DWORD)]
+
+    mon = user32.MonitorFromWindow(hwnd, 2)  # MONITOR_DEFAULTTONEAREST
+    info = MONITORINFO()
+    info.cbSize = ctypes.sizeof(MONITORINFO)
+    if not user32.GetMonitorInfoW(mon, ctypes.byref(info)):
+        return False
+    m = info.rcMonitor
+    SWP_NOZORDER, SWP_FRAMECHANGED = 0x0004, 0x0020
+    return bool(user32.SetWindowPos(hwnd, 0, m.l - 1, m.t - 1, (m.r - m.l) + 2, (m.b - m.t) + 2,
+                                    SWP_NOZORDER | SWP_FRAMECHANGED))

@@ -217,6 +217,21 @@ class Api:
     def get_trailer(self, gid):
         return self._lib.trailer_url(gid)
 
+    def _fix_fullscreen_edges(self):
+        """Esconde a moldura de 1 px que a janela mantém em tela cheia."""
+        import time
+        from .system import cover_monitor
+        time.sleep(0.35)  # espera o pywebview terminar de entrar em tela cheia
+        hwnd = None
+        try:
+            hwnd = self._window.native.Handle.ToInt32()
+        except Exception:
+            import ctypes
+            from . import APP_NAME
+            hwnd = ctypes.windll.user32.FindWindowW(None, APP_NAME)
+        if self._fullscreen:
+            cover_monitor(hwnd)
+
     def system_volume(self, action):
         from .system import volume
         return volume(action)
@@ -241,6 +256,8 @@ class Api:
             if bool(on) != getattr(self, "_fullscreen", False):
                 w.toggle_fullscreen()
                 self._fullscreen = bool(on)
+                if on:
+                    threading.Thread(target=self._fix_fullscreen_edges, daemon=True).start()
         except Exception:
             return False
         return True
