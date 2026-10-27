@@ -16,8 +16,8 @@ const ICON = {
   link: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
 };
 
-const THEMES = ["sober", "neon", "cyberpunk"];
-const AMBIENT_THEMES = ["cyberpunk"];
+const THEMES = ["sober", "neon", "cyberpunk", "midnight"];
+const AMBIENT_THEMES = ["cyberpunk", "midnight"];
 
 const state = {
   lib: { games: [], folders: [], settings: {} },
@@ -699,6 +699,7 @@ function themeOptions() {
     ["sober", t("Sóbrio"), t("Cinzas neutros, visual de launcher de desktop")],
     ["neon", "Neon", t("Roxo e ciano com destaque “Continue jogando”")],
     ["cyberpunk", "Cyberpunk", t("Amarelo neon, cantos cortados, scanlines e falhas de glitch")],
+    ["midnight", "Black Midnight", t("Preto absoluto, céu estrelado, painéis de vidro e reflexo de luar nas capas")],
   ];
 }
 

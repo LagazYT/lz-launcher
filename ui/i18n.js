@@ -303,6 +303,7 @@ const I18N = {
     "Jogo fechado pelo controle.": "Game closed with the controller.",
     "{n} sessão": "{n} session",
     "{n} sessões": "{n} sessions",
+    "Preto absoluto, céu estrelado, painéis de vidro e reflexo de luar nas capas": "Pure black, starry sky, glass panels and a moonlight shine on the covers",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -601,6 +602,7 @@ const I18N = {
     "Jogo fechado pelo controle.": "Juego cerrado con el mando.",
     "{n} sessão": "{n} sesión",
     "{n} sessões": "{n} sesiones",
+    "Preto absoluto, céu estrelado, painéis de vidro e reflexo de luar nas capas": "Negro absoluto, cielo estrellado, paneles de cristal y brillo de luna en las portadas",
   },
 };
 

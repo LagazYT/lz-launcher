@@ -490,8 +490,10 @@ function fxStart() {
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   const resize = () => { canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr; };
   resize();
-  const colors = th === "neon" ? ["124,92,255", "34,211,238"] : th === "cyberpunk" ? ["252,238,10", "0,240,255", "255,0,60"] : ["255,255,255", "232,163,61"];
-  const parts = Array.from({ length: th === "cyberpunk" ? 26 : 46 }, () => ({
+  const colors = th === "neon" ? ["124,92,255", "34,211,238"] : th === "cyberpunk" ? ["252,238,10", "0,240,255", "255,0,60"]
+    : th === "midnight" ? ["255,255,255", "200,212,255", "169,188,255"] : ["255,255,255", "232,163,61"];
+  let shooting = null;
+  const parts = Array.from({ length: th === "cyberpunk" ? 26 : th === "midnight" ? 90 : 46 }, () => ({
     x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 2.2, v: 0.00012 + Math.random() * 0.00035,
     a: 0.12 + Math.random() * 0.35, c: colors[Math.floor(Math.random() * colors.length)], p: Math.random() * Math.PI * 2,
   }));
@@ -507,6 +509,26 @@ function fxStart() {
       scan = (scan + dt * 0.12) % h;
       ctx.fillStyle = "rgba(0,240,255,0.05)"; ctx.fillRect(0, scan, w, 2 * dpr);
       if (Math.random() < 0.02) { ctx.fillStyle = `rgba(${colors[Math.floor(Math.random() * 3)]},0.08)`; ctx.fillRect(0, Math.random() * h, w, (4 + Math.random() * 18) * dpr); }
+    }
+    if (th === "midnight") {
+      // estrelas paradas que piscam + uma estrela cadente de vez em quando
+      for (const q of parts) {
+        q.p += dt * 0.002;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${q.c},${0.25 + 0.6 * Math.abs(Math.sin(q.p))})`;
+        ctx.arc(q.x * w, q.y * h * 0.75, q.r * 0.7 * dpr, 0, Math.PI * 2); ctx.fill();
+      }
+      if (!shooting && Math.random() < 0.004) shooting = { x: 0.3 + Math.random() * 0.7, y: Math.random() * 0.3, life: 0 };
+      if (shooting) {
+        shooting.life += dt;
+        const k = shooting.life / 900, x = (shooting.x - k * 0.35) * w, y = (shooting.y + k * 0.18) * h;
+        const grad = ctx.createLinearGradient(x, y, x + 140 * dpr, y - 70 * dpr);
+        grad.addColorStop(0, `rgba(255,255,255,${0.9 * (1 - k)})`); grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = grad; ctx.lineWidth = 1.6 * dpr;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 140 * dpr, y - 70 * dpr); ctx.stroke();
+        if (k >= 1) shooting = null;
+      }
+      return;
     }
     for (const q of parts) {
       q.y -= q.v * dt; q.p += dt * 0.0015;
