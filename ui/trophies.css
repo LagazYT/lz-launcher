@@ -30,6 +30,7 @@
 .ach-types { display: flex; gap: 12px; }
 .ach-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .ach-src { color: var(--text-3); font-size: 12px; }
+.ach-nodetect { color: var(--tt-gold); border-bottom: 1px dotted currentColor; cursor: help; }
 .ach-note { font-size: 12px; margin: 0 0 10px; }
 
 /* lista */

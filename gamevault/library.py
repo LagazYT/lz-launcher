@@ -363,8 +363,13 @@ class Library:
             items.append({**{k: v for k, v in a.items() if not k.startswith("_")},
                           "icon": self.icon_url(a.get("icon")), "icon_gray": self.icon_url(a.get("icon_gray")),
                           "unlocked": un.get(a["id"])})
+        w = self._ach_watch.get(gid)
+        try:
+            detect = achmod.detect_label(achmod.collect_files(w["targets"] if w else achmod.watch_targets(g, ach)))
+        except Exception:
+            detect = None
         return {"kind": ach["kind"], "source": ach.get("source"), "groups": ach.get("groups"), "list": items,
-                **(self.ach_summary(g) or {})}
+                "detect": detect, **(self.ach_summary(g) or {})}
 
     def achievements_overview(self) -> dict:
         games, recent = [], []

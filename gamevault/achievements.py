@@ -235,6 +235,9 @@ def steam_user_unlocks(appid: int, schema: list) -> dict:
     if not sp:
         return {}
     by_bit = {(str(a.get("_stat")), a.get("_bit")): a["id"] for a in schema if a.get("_stat") is not None}
+    if not by_bit:  # lista veio do site: usa o mapa de bits que a Steam guarda no PC quando o jogo roda
+        by_bit = {(str(a.get("_stat")), a.get("_bit")): a["id"] for a in (steam_local_schema(appid, "en") or [])
+                  if a.get("_stat") is not None}
     out = {}
     for f in glob.glob(str(sp / "appcache" / "stats" / f"UserGameStats_*_{appid}.bin")):
         try:
@@ -670,6 +673,19 @@ def watch_targets(g: dict, ach: dict) -> dict:
     sp = steam_path()
     globs = [str(sp / "appcache" / "stats" / f"UserGameStats_*_{appid}.bin")] if sp else []
     return {"dirs": [], "paths": paths, "globs": globs}
+
+
+def detect_label(files: list) -> str | None:
+    """De onde os desbloqueios deste jogo estão sendo lidos (para mostrar na página do jogo)."""
+    rules = [("/appcache/stats/", "Steam"), ("/gse saves/", "Goldberg/GSE"), ("/goldberg steamemu saves/", "Goldberg/GSE"),
+             ("/rune/", "RUNE"), ("/codex/", "CODEX"), ("onlinefix", "OnlineFix"), ("/empress/", "EMPRESS"), ("skidrow", "SKIDROW")]
+    names = []
+    for f in files:
+        low = f.replace(chr(92), "/").lower()
+        n = next((label for key, label in rules if key in low), "port")
+        if n not in names:
+            names.append(n)
+    return ", ".join(names) or None
 
 
 def collect_files(targets: dict) -> list:

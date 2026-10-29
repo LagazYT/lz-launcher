@@ -97,7 +97,7 @@ function achListHTML(d, g) {
       <button data-achf="all" class="${ACH.filter === "all" ? "on" : ""}">${t("Todas")}</button>
       <button data-achf="on" class="${ACH.filter === "on" ? "on" : ""}">${t("Desbloqueadas")}</button>
       <button data-achf="off" class="${ACH.filter === "off" ? "on" : ""}">${t("Bloqueadas")}</button></div>
-      <span class="ach-src">${t("Fonte")}: ${esc(d.source || "")}</span></div>
+      <span class="ach-src">${t("Lista")}: ${esc(d.source || "")} · ${t("Desbloqueio")}: ${d.detect ? esc(d.detect) : `<span class="ach-nodetect" data-tip="${esc(t("Nem a Steam nem um emulador gravou conquistas deste jogo no PC. Quando algum deles gravar, o LZ Launcher passa a detectar sozinho."))}">${t("nada gravado ainda")}</span>`}</span></div>
     ${waiting}
     <div class="ach-list">${body || `<p class="hint">${t("Nada por aqui.")}</p>`}</div>`;
 }

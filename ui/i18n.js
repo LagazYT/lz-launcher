@@ -340,6 +340,9 @@ const I18N = {
     "Por jogo": "By game",
     "Troféus da PSN e conquistas dos seus jogos": "PSN trophies and achievements from your games",
     "Buscar a lista de novo": "Fetch the list again",
+    "Desbloqueio": "Unlocks",
+    "nada gravado ainda": "nothing saved yet",
+    "Nem a Steam nem um emulador gravou conquistas deste jogo no PC. Quando algum deles gravar, o LZ Launcher passa a detectar sozinho.": "Neither Steam nor an emulator has saved achievements for this game on this PC. As soon as one does, LZ Launcher detects it automatically.",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -675,6 +678,9 @@ const I18N = {
     "Por jogo": "Por juego",
     "Troféus da PSN e conquistas dos seus jogos": "Trofeos de PSN y logros de tus juegos",
     "Buscar a lista de novo": "Volver a buscar la lista",
+    "Desbloqueio": "Desbloqueo",
+    "nada gravado ainda": "nada guardado aún",
+    "Nem a Steam nem um emulador gravou conquistas deste jogo no PC. Quando algum deles gravar, o LZ Launcher passa a detectar sozinho.": "Ni Steam ni un emulador ha guardado logros de este juego en el PC. Cuando alguno lo haga, LZ Launcher lo detectará solo.",
   },
 };
 
