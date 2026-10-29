@@ -3,8 +3,10 @@
 Lista oficial:
 - Ports de PS4/PS5: troféus da PSN pela Exophase (nome, descrição, tipo, raridade), ícones oficiais tirados do
   próprio dump (sce_sys/trophy/trophy00.trp) e, quando o port grava, os textos traduzidos dele.
-- Jogos de PC: conquistas da Steam (arquivos de estatísticas da própria Steam no PC, o steam_settings do jogo ou,
-  com uma chave, a Web API da Steam) e a raridade global da Steam.
+- Jogos de PC: conquistas da Steam (arquivos de estatísticas da própria Steam no PC, o steam_settings do jogo ou a
+  página pública de conquistas da Steam, que já vem traduzida) e a raridade global da Steam. Jogos de fora da
+  Steam têm o AppID descoberto pelo nome.
+- Jogos que não têm conquistas na Steam (Xbox, PS3, Ubisoft...): lista da Exophase da plataforma mais próxima.
 
 Desbloqueio: lido dos arquivos que o jogo grava no PC (Steam, arquivos de conquistas no formato Goldberg/GSE,
 CODEX/RUNE, OnlineFix e EMPRESS e a pasta de troféus dos ports). O LZ Launcher só lê esses arquivos.
@@ -18,6 +20,7 @@ import os
 import re
 import struct
 import time
+import unicodedata
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -38,7 +41,11 @@ def fix_icon_url(url: str) -> str:
         if old in url:
             return url.replace(old, NEW_STEAM_ICON)
     return url
+
+
 TROPHY_TYPES = ("platinum", "gold", "silver", "bronze")
+VERSION = 2   # muda quando a busca melhora: jogos marcados "sem conquistas" são verificados de novo
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36"
 
 
 # ------------------------------------------------------------------ KeyValues binário (Steam)
@@ -143,6 +150,75 @@ def steam_web_schema(appid: int, key: str, lang: str) -> list | None:
         return None
     return [{"id": a["name"], "name": a.get("displayName") or a["name"], "desc": a.get("description") or "",
              "hidden": bool(a.get("hidden")), "icon": a.get("icon"), "icon_gray": a.get("icongray")} for a in ach] or None
+
+
+def steam_community_schema(appid: int, lang: str) -> tuple[list | None, list | None]:
+    """Lista completa (nome interno, nome, descrição, ícones, ocultas, raridade) da página pública da Steam, sem chave."""
+    r = _get(f"https://steamcommunity.com/stats/{appid}/achievements/", params={"l": STEAM_LANG.get(lang, "english")},
+             headers={"User-Agent": UA}, cookies={"Steam_Language": STEAM_LANG.get(lang, "english")})
+    if not r or r.status_code != 200:
+        return None, None
+    m = re.search(r'<script type="application/json" id="valve-ssr-data"[^>]*>(.*?)</script>', r.text, re.S)
+    try:
+        queries = json.loads(json.loads(m.group(1))["renderContext"]["queryData"])["queries"]
+    except Exception:
+        return None, None
+    schema, pct = None, {}
+    for q in queries:
+        key = q.get("queryKey") or []
+        data = (q.get("state") or {}).get("data")
+        if len(key) >= 3 and key[0] == "achievements" and key[2] == "schema_v2":
+            schema = data
+        elif len(key) >= 3 and key[0] == "achievements" and key[2] == "globalpercentages":
+            pct = (data or {}).get("percentages") or {}
+    if not schema:
+        return None, None
+    groups = [gr for gr in schema.get("groups") or [] if gr.get("achievements")]
+    named = len(groups) > 1
+    out = []
+    for gr in groups:
+        for a in gr["achievements"]:
+            if a.get("archived"):
+                continue
+            p = pct.get(str(a.get("internal_key")))
+            out.append({"id": a["api_name"], "name": a.get("name") or a["api_name"], "desc": a.get("description") or "",
+                        "hidden": bool(a.get("hidden")),
+                        "icon": STEAM_CDN.format(appid=appid, icon=a["icon_achieved"]) if a.get("icon_achieved") else None,
+                        "icon_gray": STEAM_CDN.format(appid=appid, icon=a["icon_unachieved"]) if a.get("icon_unachieved") else None,
+                        "rarity": round(float(p), 1) if p is not None else None,
+                        **({"group": gr.get("name") or "—"} if named else {})})
+    return (out or None), ([gr.get("name") or "—" for gr in groups] if named else None)
+
+
+def _norm(t: str) -> str:
+    """Nome comparável: sem acentos, símbolos, pontuação e espaços."""
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()
+    return _norm_title(t)
+
+
+EXTRA_WORDS = re.compile(r"\b(soundtrack|ost|artbook|demo|dlc|pack|season pass|upgrade|bundle|playtest|beta|skin|costume|expansion)\b", re.I)
+
+
+def steam_guess_appid(name: str) -> int | None:
+    """AppID da Steam pelo nome do jogo (para jogos que vieram de pasta, sem steam_appid.txt)."""
+    if not name:
+        return None
+    r = _get("https://store.steampowered.com/api/storesearch/", params={"term": name, "l": "english", "cc": "US"})
+    try:
+        items = r.json().get("items") or []
+    except Exception:
+        return None
+    target = _norm(name)
+    for it in items:
+        if _norm(it["name"]) == target:
+            return it["id"]
+    for it in items:  # "Im not a human" -> "No, I'm not a Human"
+        n = _norm(it["name"])
+        if EXTRA_WORDS.search(it["name"]) or not n:
+            continue
+        if (target in n or n in target) and min(len(n), len(target)) / max(len(n), len(target)) >= 0.6:
+            return it["id"]
+    return None
 
 
 def steam_global_percent(appid: int) -> dict:
@@ -285,8 +361,11 @@ def trp_icons(dump: str | None, gid: str, trp: str | None = None) -> dict:
     return icons
 
 
-def exophase_search(query: str) -> list:
-    r = _get("https://api.exophase.com/public/archive/games", params={"q": query, "platform": "psn"})
+def exophase_search(query: str, platform: str | None = "psn") -> list:
+    params = {"q": query}
+    if platform:
+        params["platform"] = platform
+    r = _get("https://api.exophase.com/public/archive/games", params=params)
     try:
         return r.json()["games"]["list"]
     except Exception:
@@ -309,6 +388,47 @@ def exophase_trophies(name: str, platform: str = "ps4") -> list | None:
     return exophase_awards(games[0].get("endpoint_awards"))
 
 
+# plataforma do jogo -> plataformas da Exophase, na ordem de preferência
+EXO_PREF = {
+    "Xbox One": ["xbox-one", "xbox-series", "windows-10", "xbox-360"],
+    "Xbox 360": ["xbox-360", "xbox-one"],
+    "Xbox Series": ["xbox-series", "xbox-one", "windows-10"],
+    "PS3": ["ps3", "ps4"],
+    "PS4": ["ps4", "ps5"],
+    "PS5": ["ps5", "ps4"],
+}
+PC_PREF = ["steam", "gog", "epic", "windows-10", "xbox-series", "xbox-one", "ps5", "ps4", "xbox-360", "ps3"]
+PS_PLATS = {"ps3", "ps4", "ps5", "psn-pc", "vita"}
+
+
+def exophase_any(name: str, platform: str | None) -> tuple[list | None, str | None]:
+    """Lista da Exophase para jogos sem conquistas na Steam: mesmo nome, plataforma mais próxima."""
+    games = exophase_search(name, None)
+    target = _norm(name)
+    pref = EXO_PREF.get(platform or "", []) + [p for p in PC_PREF if p not in EXO_PREF.get(platform or "", [])]
+    best, best_rank = None, None
+    for g in games:
+        n = _norm(g.get("title", ""))
+        if n != target and not (n.startswith(target) and len(target) / max(len(n), 1) >= 0.75):
+            continue
+        slugs = [p.get("slug") for p in g.get("platforms") or []]
+        rank = min((pref.index(s) for s in slugs if s in pref), default=None)
+        if rank is None:
+            continue
+        rank += 0 if n == target else 50
+        if best_rank is None or rank < best_rank:
+            best, best_rank = g, rank
+    if not best:
+        return None, None
+    lst = exophase_awards(best.get("endpoint_awards"))
+    slug = next((p.get("slug") for p in best.get("platforms") or [] if p.get("slug") in pref), "")
+    return lst, slug
+
+
+EXO_NAMES = {"xbox-one": "Xbox", "xbox-series": "Xbox", "xbox-360": "Xbox 360", "windows-10": "Xbox (PC)", "steam": "Steam",
+             "gog": "GOG", "epic": "Epic Games", "ps3": "PSN", "ps4": "PSN", "ps5": "PSN", "psn-pc": "PSN"}
+
+
 def exophase_awards(url: str | None) -> list | None:
     page = _get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36"}) if url else None
     if not page or page.status_code != 200:
@@ -320,7 +440,7 @@ def exophase_awards(url: str | None) -> list | None:
             continue
         title = re.search(r'award-title[^>]*>\s*<a[^>]*>(.*?)</a>', block, re.S)
         desc = re.search(r'award-description[^>]*>\s*<p>(.*?)</p>', block, re.S)
-        img = re.search(r'<img[^>]+src="([^"]+)"', block)
+        img = re.search(r'\ssrc="(https?://[^"]+\.(?:png|jpe?g|webp)[^"]*)"', block)
         typ = re.search(r'exo-icon-trophy-(platinum|gold|silver|bronze)', block)
         avg = re.search(r'data-average="([\d.]+)"', block)
         out.append({
@@ -328,7 +448,7 @@ def exophase_awards(url: str | None) -> list | None:
             "name": htmlmod.unescape(re.sub(r"<[^>]+>", "", title.group(1)).strip()) if title else "",
             "desc": htmlmod.unescape(re.sub(r"<[^>]+>", "", desc.group(1)).strip()) if desc else "",
             "type": typ.group(1) if typ else "bronze",
-            "icon": img.group(1).split("?")[0] if img else None,
+            "icon": img.group(1).split("?")[0].replace("/awards/s/", "/awards/m/") if img else None,  # versão média, mais nítida
             "rarity": round(float(avg.group(1)), 1) if avg else None,
             "hidden": False,
         })
@@ -492,29 +612,50 @@ def build_list(g: dict, gid: str, lang: str, steam_key: str = "") -> dict | None
             a["id"] = str(a["id"])
         return {"kind": "psn", "list": lst, "lang": lang, "np": np_ids(g.get("dump")), "set_icon": icons.get("set"),
                 "source": "PSN (Exophase)" + (" + port" if texts else ""), "t": time.time()}
+    is_pc = kind != "recompiled"
     appid = g.get("steam_appid") or find_appid(g.get("root")) or g.get("steam_appid_guess")
-    if not appid:
+    if not appid and is_pc:
+        appid = steam_guess_appid(name)
+    groups = None
+    if appid:
+        appid = int(appid)
+        lst, source = steam_local_schema(appid, lang), "Steam"
+        if not lst:
+            lst, source = steam_settings_schema(g.get("root"), lang), "Steam (steam_settings)"
+        if not lst:
+            lst, groups = steam_community_schema(appid, lang)
+            source = "Steam"
+        if not lst:
+            lst, source = steam_web_schema(appid, steam_key, lang), "Steam Web API"
+        if lst:
+            if any(a.get("rarity") is None for a in lst):
+                pct = steam_global_percent(appid)
+                for a in lst:
+                    if a.get("rarity") is None:
+                        a["rarity"] = pct.get(a["id"])
+            for a in lst:
+                a.setdefault("type", None)
+            return {"kind": "steam", "appid": appid, "list": lst, "lang": lang, "source": source, "groups": groups, "t": time.time()}
+    # sem conquistas na Steam (Ubisoft, Xbox, PS3...): Exophase
+    lst, slug = exophase_any(name, None if is_pc else g.get("platform"))
+    if not lst:
         return None
-    appid = int(appid)
-    lst, source = steam_local_schema(appid, lang), "Steam"
-    if not lst:
-        lst, source = steam_settings_schema(g.get("root"), lang), "Steam (steam_settings)"
-    if not lst:
-        lst, source = steam_web_schema(appid, steam_key, lang), "Steam Web API"
-    if not lst:
-        return None
-    pct = steam_global_percent(appid)
+    ps = slug in PS_PLATS
     for a in lst:
-        a["rarity"] = pct.get(a["id"])
-        a.setdefault("type", None)
-    return {"kind": "steam", "appid": appid, "list": lst, "lang": lang, "source": source, "t": time.time()}
+        a["id"] = str(a["id"])
+        if not ps:
+            a["type"] = None
+    return {"kind": "psn" if ps else "exo", "appid": appid, "list": lst, "lang": lang,
+            "source": f"{EXO_NAMES.get(slug, slug)} (Exophase)", "t": time.time()}
 
 
 def watch_targets(g: dict, ach: dict) -> dict:
     """Onde procurar os desbloqueios deste jogo (calculado uma vez e reaproveitado)."""
     if ach["kind"] == "psn":
         return {"dirs": _find_dirs(g.get("root"), ("trophy", "trophyfiles"), max_depth=6) if g.get("root") else [], "paths": [], "globs": []}
-    appid = ach["appid"]
+    appid = ach.get("appid")
+    if not appid:
+        return {"dirs": [], "paths": [], "globs": []}
     a, pub, doc = os.environ.get("APPDATA", ""), os.environ.get("PUBLIC", r"C:\Users\Public"), os.path.expanduser(r"~\Documents")
     paths = [
         os.path.join(a, "Goldberg SteamEmu Saves", str(appid), "achievements.json"),
@@ -546,6 +687,8 @@ def collect_files(targets: dict) -> list:
 def unlock_files(g: dict, ach: dict) -> list:
     if ach["kind"] == "psn":
         return port_trophy_files(g.get("root"))
+    if not ach.get("appid"):
+        return []
     files = emulator_files(ach["appid"], g.get("root"))
     sp = steam_path()
     if sp:
@@ -557,6 +700,8 @@ def read_unlocks(g: dict, ach: dict, files: list) -> dict:
     if ach["kind"] == "psn":
         return {str(k): v for k, v in parse_port_unlocks(files).items()}
     out = {}
+    if not ach.get("appid"):
+        return out
     if any(f.endswith(".bin") for f in files):
         out.update(steam_user_unlocks(ach["appid"], ach["list"]))
     ids = {a["id"].lower(): a["id"] for a in ach["list"]}

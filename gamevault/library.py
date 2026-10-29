@@ -250,13 +250,15 @@ class Library:
         cur = g.get("ach")
         if cur and not force and cur.get("lang") == lang and time.time() - cur.get("t", 0) < ACH_REFRESH:
             return
-        if not force and not cur and time.time() - g.get("ach_none", 0) < 3 * 86400:
+        if not force and not cur and g.get("ach_none_v") == achmod.VERSION and time.time() - g.get("ach_none", 0) < 3 * 86400:
             return
         new = achmod.build_list(g, gid, lang, self.store.settings.get("steam_api_key", "").strip())
         if not new:
             g["ach_none"] = time.time()
+            g["ach_none_v"] = achmod.VERSION
             return
         g.pop("ach_none", None)
+        g.pop("ach_none_v", None)
         g["ach"] = new
         # o que já estava desbloqueado entra no histórico sem aviso
         files = achmod.collect_files(achmod.watch_targets(g, new))
