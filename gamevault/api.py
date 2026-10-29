@@ -214,6 +214,31 @@ class Api:
         self._lib.tv_active = bool(on)
         return self.set_fullscreen(on)
 
+    # --- conquistas ---------------------------------------------------------------
+    def get_achievements(self, gid):
+        return self._lib.achievements(gid)
+
+    def achievements_overview(self):
+        return self._lib.achievements_overview()
+
+    def refresh_achievements(self, gid=None):
+        self._lib.refresh_achievements(gid)
+        return True
+
+    def test_trophy(self):
+        """Mostra um aviso de exemplo (botão nas Configurações)."""
+        for gid, g in self._lib.store.games.items():
+            data = self._lib.achievements(gid)
+            if data and data["list"]:
+                a = data["list"][0]
+                item = {"game_id": gid, "game": g.get("name") or g.get("name_auto"), "kind": data["kind"], "id": a["id"],
+                        "name": a["name"], "desc": a["desc"], "type": a.get("type"), "rarity": a.get("rarity"),
+                        "icon": a["icon"], "progress": [data["unlocked"], data["total"]], "test": True}
+                if self._lib.on_trophy:
+                    self._lib.on_trophy([item])
+                return True
+        return False
+
     def get_trailer(self, gid):
         return self._lib.trailer_url(gid)
 

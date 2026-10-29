@@ -11,6 +11,7 @@ from gamevault import APP_NAME
 from gamevault.api import Api
 from gamevault.i18n import tr
 from gamevault.library import Library
+from gamevault.overlay import TrophyOverlay
 from gamevault.paths import LOG_FILE
 from gamevault.server import make_server
 from gamevault.system import bring_to_front, is_start_with_windows
@@ -36,6 +37,8 @@ def main():
                                    min_size=(980, 620), background_color="#141518")
     api._bind(window)
     quitting = threading.Event()
+    # aviso de troféu/conquista por cima do jogo
+    overlay = TrophyOverlay(f"http://127.0.0.1:{srv.server_address[1]}/overlay.html", st, lib.lang)
 
     def show_window():
         window.show()
@@ -55,6 +58,7 @@ def main():
     def quit_app():
         quitting.set()
         tray.stop()
+        overlay.destroy()
         window.destroy()
 
     tray = Tray(on_open=show_window, on_quit=quit_app, lang=lib.lang())
@@ -82,6 +86,15 @@ def main():
         front()
         lib.push_event("pad_home", closed=closed)
 
+    def on_trophy(items):
+        if st.get("ach_overlay", True):
+            overlay.push(items)
+        else:
+            for it in items:
+                tray.notify(f"{it.get('name')} — {it.get('game')}")
+
+    lib.on_trophy = on_trophy
+    window.events.closed += overlay.destroy
     lib.tracker.on_session_end = on_session_end
     lib.pad = PadWatcher(on_hold_combo=on_hold_combo)
     api._quit = quit_app

@@ -1,0 +1,82 @@
+/* LZ Launcher - Troféus e conquistas */
+:root { --tt-platinum: #b9d3ff; --tt-gold: #e8b73d; --tt-silver: #c0c6d0; --tt-bronze: #c8834e; }
+
+#d-trophies-sec h3 { display: flex; align-items: center; gap: 6px; }
+/* selo de progresso na capa */
+.c-ach { position: absolute; left: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 5px;
+  font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: #fff; background: rgba(0, 0, 0, .62); border-radius: 3px; backdrop-filter: blur(4px); pointer-events: none; }
+.c-ach svg { width: 12px; height: 12px; fill: none; stroke: var(--tt-gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.c-ach.plat svg, .c-ach.full svg { stroke: var(--tt-platinum); }
+.card:hover .c-ach { opacity: 0; }
+[data-theme="cyberpunk"] .c-ach { border-radius: 0; border-left: 2px solid var(--accent); }
+[data-theme="midnight"] .c-ach { border-radius: 10px; }
+
+/* selo do tipo de troféu */
+.tt { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.tt i { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--c); box-shadow: 0 0 0 1px rgba(0, 0, 0, .35) inset, 0 0 6px color-mix(in srgb, var(--c) 55%, transparent); }
+.tt.platinum { --c: var(--tt-platinum); }
+.tt.gold { --c: var(--tt-gold); }
+.tt.silver { --c: var(--tt-silver); }
+.tt.bronze { --c: var(--tt-bronze); }
+.ach-name .tt { margin-right: 6px; vertical-align: -1px; }
+
+/* progresso */
+.ach-progress { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; margin-bottom: 12px; }
+.ach-pnum { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ach-pnum b { font-size: 22px; color: var(--text); font-weight: 600; }
+.ach-pnum span { margin-left: 8px; color: var(--accent); font-weight: 600; }
+.ach-pbar { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; min-width: 60px; }
+.ach-pbar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .4s ease; }
+.ach-types { display: flex; gap: 12px; }
+.ach-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.ach-src { color: var(--text-3); font-size: 12px; }
+.ach-note { font-size: 12px; margin: 0 0 10px; }
+
+/* lista */
+.ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 6px; }
+.ach-list.recent { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.ach-group { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin: 10px 0 2px; }
+.ach { display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; min-width: 0; }
+.ach[data-open] { cursor: pointer; }
+.ach[data-open]:hover { border-color: var(--line-2); }
+.ach-icon { width: 48px; height: 48px; flex: none; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+.ach-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ach.off .ach-icon img { filter: grayscale(1) brightness(.55); }
+.ach.secret .ach-icon img { filter: grayscale(1) brightness(.3) blur(3px); }
+.ach-body { flex: 1; min-width: 0; }
+.ach-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ach-desc { font-size: 12px; color: var(--text-3); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ach.off .ach-name { color: var(--text-2); }
+.ach-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.ach-rar.rare { color: var(--tt-gold); }
+.ach-rar.ultra { color: var(--tt-platinum); font-weight: 600; }
+.ach.on .ach-date { color: var(--accent); }
+
+/* página Conquistas: por jogo */
+.ach-games { display: grid; gap: 6px; }
+.ach-game { display: flex; align-items: center; gap: 12px; padding: 6px 10px 6px 6px; border-radius: 4px; cursor: pointer; }
+.ach-game:hover { background: var(--panel-2); }
+.ach-game .thumb { width: 34px; height: 46px; flex: none; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.ach-game .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ag-main { flex: 1; min-width: 0; }
+.ag-top { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ag-name { font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-num { font-size: 12px; color: var(--text-3); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.ag-kind { font-size: 11px; color: var(--text-3); width: 80px; text-align: right; flex: none; }
+
+/* Modo TV */
+.tv-chip.ach { background: rgba(232, 183, 61, .28); }
+.tv-chip.ach.plat { background: rgba(185, 211, 255, .3); }
+.tv-trophies { display: flex; gap: .4em; margin: .9em 0 .2em; flex-wrap: wrap; }
+.tv-tr { width: 2.6em; height: 2.6em; border-radius: .35em; overflow: hidden; background: rgba(255, 255, 255, .1); }
+.tv-tr img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1) brightness(.45); }
+.tv-tr.on img { filter: none; }
+
+/* temas */
+[data-theme="cyberpunk"] .ach { border-radius: 0; clip-path: var(--chamfer); }
+[data-theme="cyberpunk"] .ach-pbar { border-radius: 0; }
+[data-theme="cyberpunk"] .ach-group { color: var(--cy); letter-spacing: 1.8px; }
+[data-theme="midnight"] .ach { border-radius: 14px; background: var(--panel); backdrop-filter: blur(10px); }
+[data-theme="midnight"] .ach-icon { border-radius: 10px; }
+[data-theme="midnight"] .ach-game { border-radius: 12px; }
+[data-theme="midnight"] .ach-pnum b { font-family: var(--serif); font-weight: 400; font-size: 28px; color: var(--moon); }

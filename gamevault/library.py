@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 
+from . import achievements as achmod
 from . import art, platforms, stores
 from .i18n import resolve as resolve_lang, tr
 from .info import fetch_info
@@ -24,6 +25,7 @@ AUTO_KEYS = ("root", "folder_name", "platform", "title_id", "version", "art_loca
 # lojas que abrem o jogo por um link próprio (steam://, uplay://, shell:AppsFolder...)
 URI_SOURCES = ("steam", "epic", "ubisoft", "xbox")
 INFO_RETRY = 7 * 86400
+ACH_REFRESH = 14 * 86400   # a lista oficial é buscada de novo a cada 14 dias
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
 
 
@@ -40,6 +42,8 @@ class Library:
         self.events: list[dict] = []   # avisos do programa para a interface (lidos no status)
         self.tv_active = False         # a interface está no Modo TV
         self._trailers: dict[str, str | None] = {}
+        self._ach_watch: dict[str, dict] = {}   # arquivos de conquistas observados por jogo
+        self.on_trophy = None                   # aviso por cima do jogo (definido pelo main)
         self.pad = None                # PadWatcher (controle XInput)
 
     def lang(self) -> str:
@@ -49,6 +53,7 @@ class Library:
     def start(self):
         self.tracker.start()
         self.updater.start()
+        threading.Thread(target=self._ach_loop, name="achievements", daemon=True).start()
         self.rescan_async()
 
     def rescan_async(self, force_art=False):
@@ -154,6 +159,10 @@ class Library:
                         self._resolve_info(g, force)
                     except Exception as e:
                         log.warning("info %s: %s", gid, e)
+                    try:
+                        self._resolve_ach(gid, g, force)
+                    except Exception as e:
+                        log.warning("ach %s: %s", gid, e)
                     self.store.touch()
             finally:
                 self.art_busy = False
@@ -234,6 +243,146 @@ class Library:
         else:
             g["info_fail"] = {"lang": lang, "t": time.time()}
         time.sleep(0.4)  # não sobrecarrega a Steam/Wikipédia
+
+    # ------------------------------------------------------------------ conquistas
+    def _resolve_ach(self, gid: str, g: dict, force=False):
+        lang = self.lang()
+        cur = g.get("ach")
+        if cur and not force and cur.get("lang") == lang and time.time() - cur.get("t", 0) < ACH_REFRESH:
+            return
+        if not force and not cur and time.time() - g.get("ach_none", 0) < 3 * 86400:
+            return
+        new = achmod.build_list(g, gid, lang, self.store.settings.get("steam_api_key", "").strip())
+        if not new:
+            g["ach_none"] = time.time()
+            return
+        g.pop("ach_none", None)
+        g["ach"] = new
+        # o que já estava desbloqueado entra no histórico sem aviso
+        files = achmod.collect_files(achmod.watch_targets(g, new))
+        known = g.setdefault("ach_unlocked", {})
+        for k, ts in achmod.read_unlocks(g, new, files).items():
+            known.setdefault(k, ts)
+        self._ach_watch.pop(gid, None)
+
+    def refresh_achievements(self, gid: str | None = None):
+        def run():
+            for i in ([gid] if gid else list(self.store.games)):
+                g = self.store.games.get(i)
+                if g and not g.get("missing"):
+                    try:
+                        self._resolve_ach(i, g, force=True)
+                    except Exception as e:
+                        log.warning("ach %s: %s", i, e)
+                    self.store.touch()
+            self.store.save()
+        threading.Thread(target=run, daemon=True).start()
+
+    def _ach_loop(self):
+        """Vigia os arquivos de conquistas e avisa na hora em que uma nova é desbloqueada."""
+        time.sleep(8)
+        while True:
+            try:
+                self._ach_tick()
+            except Exception as e:
+                log.warning("ach loop: %s", e)
+            time.sleep(3)
+
+    def _ach_tick(self):
+        now = time.time()
+        fresh = []
+        for gid, g in list(self.store.games.items()):
+            ach = g.get("ach")
+            if not ach or g.get("missing"):
+                continue
+            w = self._ach_watch.get(gid)
+            if not w or now - w["t"] > 300:
+                w = {"targets": achmod.watch_targets(g, ach), "t": now, "sig": w["sig"] if w else None}
+                self._ach_watch[gid] = w
+            files = achmod.collect_files(w["targets"])
+            sig = achmod.files_signature(files)
+            if sig == w["sig"]:
+                continue
+            first = w["sig"] is None
+            w["sig"] = sig
+            unlocks = achmod.read_unlocks(g, ach, files)
+            known = g.setdefault("ach_unlocked", {})
+            new = [k for k in unlocks if k not in known]
+            for k in new:
+                ts = unlocks[k]
+                known[k] = ts if ts > 1_000_000_000 else int(now)
+            if not new:
+                continue
+            by_id = {a["id"]: a for a in ach["list"]}
+            for k in new:
+                # na primeira leitura só avisa o que foi desbloqueado nos últimos 10 minutos
+                if first and now - known[k] > 600:
+                    continue
+                a = by_id.get(k, {})
+                fresh.append({"game_id": gid, "game": g.get("name") or g.get("name_auto"), "kind": ach["kind"],
+                              "id": k, "name": a.get("name") or k, "desc": a.get("desc") or "", "type": a.get("type"),
+                              "rarity": a.get("rarity"), "icon": self.icon_url(a.get("icon")),
+                              "progress": [len([x for x in known if x in by_id]), len(by_id)]})
+        if fresh:
+            self.store.save()
+            for item in fresh:
+                self.push_event("trophy", **item)
+            if self.on_trophy:
+                try:
+                    self.on_trophy(fresh)
+                except Exception as e:
+                    log.warning("overlay: %s", e)
+
+    def icon_url(self, icon: str | None) -> str | None:
+        if not icon:
+            return None
+        if icon.startswith(("http://", "https://")):
+            return achmod.fix_icon_url(icon)
+        return "/local/" + self.local_token(icon) if os.path.isfile(icon) else None
+
+    def ach_summary(self, g: dict) -> dict | None:
+        ach = g.get("ach")
+        if not ach:
+            return None
+        ids = {a["id"]: a for a in ach["list"]}
+        unlocked = [k for k in (g.get("ach_unlocked") or {}) if k in ids]
+        plat = any(ids[k].get("type") == "platinum" for k in unlocked)
+        last = max([(g.get("ach_unlocked") or {})[k] for k in unlocked], default=None)
+        return {"kind": ach["kind"], "total": len(ids), "unlocked": len(unlocked), "plat": plat, "last": last}
+
+    def achievements(self, gid: str) -> dict | None:
+        g = self.store.games.get(gid)
+        if not g or not g.get("ach"):
+            return None
+        ach = g["ach"]
+        un = g.get("ach_unlocked") or {}
+        items = []
+        for a in ach["list"]:
+            items.append({**{k: v for k, v in a.items() if not k.startswith("_")},
+                          "icon": self.icon_url(a.get("icon")), "icon_gray": self.icon_url(a.get("icon_gray")),
+                          "unlocked": un.get(a["id"])})
+        return {"kind": ach["kind"], "source": ach.get("source"), "groups": ach.get("groups"), "list": items,
+                **(self.ach_summary(g) or {})}
+
+    def achievements_overview(self) -> dict:
+        games, recent = [], []
+        for gid, g in self.store.games.items():
+            if g.get("missing") or not g.get("ach"):
+                continue
+            s = self.ach_summary(g)
+            games.append({"id": gid, "name": g.get("name") or g.get("name_auto"), **s})
+            by_id = {a["id"]: a for a in g["ach"]["list"]}
+            for k, ts in (g.get("ach_unlocked") or {}).items():
+                a = by_id.get(k)
+                if a:
+                    recent.append({"game_id": gid, "game": g.get("name") or g.get("name_auto"), "kind": g["ach"]["kind"],
+                                   "name": a.get("name"), "desc": a.get("desc"), "type": a.get("type"), "rarity": a.get("rarity"),
+                                   "icon": a.get("icon"), "ts": ts})
+        recent.sort(key=lambda x: x["ts"] or 0, reverse=True)
+        recent = recent[:40]
+        for r in recent:
+            r["icon"] = self.icon_url(r["icon"])
+        return {"games": games, "recent": recent}
 
     def refresh_info(self, gid: str | None = None):
         def run():
@@ -449,6 +598,7 @@ class Library:
             "art_source": (g.get("art_online") or {}).get("source"),
             "info": g.get("info"),
             "history": g.get("history") or [],
+            "ach": self.ach_summary(g),
         }
 
     @staticmethod

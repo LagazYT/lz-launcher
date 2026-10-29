@@ -249,6 +249,7 @@ function render() {
   if (AMBIENT_THEMES.includes(theme()) && !ambientId) setAmbient(list.find(g => g.last_played) || list[0]);
   if (state.current) renderDetails();
   if (state.page === "stats") renderStats();
+  if (state.page === "trophies" && !state.current) renderTrophiesPage(true);
   if (state.tv) renderTV();
 }
 
@@ -291,6 +292,7 @@ function renderGrid(list) {
       ${coverHTML(g)}
         <div class="badge-row"><span class="pbadge ${slug(g.platform)}">${esc(platformLabel(g)).toUpperCase()}</span>${g.favorite ? '<span class="fav-dot">★</span>' : ""}</div>
         ${running ? `<div class="c-running">${t("Jogando agora")}</div>` : ""}
+        ${trophyBadge(g)}
         <button class="c-play" data-play="${g.id}" tabindex="-1">${running ? t("Abrir") : ICON.play + t("Jogar")}</button>
       </div>
       <div class="card-meta">
@@ -357,6 +359,7 @@ function showPage(page) {
   $("#details").hidden = true;
   $("#library-view").hidden = page !== "library";
   $("#stats-view").hidden = page !== "stats";
+  $("#trophies-view").hidden = page !== "trophies";
   render();
 }
 
@@ -365,6 +368,7 @@ function openDetails(id) {
   state.current = id;
   $("#library-view").hidden = true;
   $("#stats-view").hidden = true;
+  $("#trophies-view").hidden = true;
   $("#details").hidden = false;
   $("#details").scrollTop = 0;
   renderDetails(true);
@@ -376,6 +380,7 @@ function closeDetails() {
   $("#details").hidden = true;
   $("#library-view").hidden = state.page !== "library";
   $("#stats-view").hidden = state.page !== "stats";
+  $("#trophies-view").hidden = state.page !== "trophies";
 }
 
 function infoHTML(g) {
@@ -441,6 +446,7 @@ function renderDetails(full = false) {
   if (full || $("#d-info")._key !== infoKey) { $("#d-info").innerHTML = infoHTML(g); $("#d-info")._key = infoKey; }
   const sessKey = (g.history || []).length + "|" + running + "|" + (running ? Math.floor(state.running[g.id] / 5) : "") + LANG;
   if (full || $("#d-sessions")._key !== sessKey) { $("#d-sessions").innerHTML = sessionsHTML(g); $("#d-sessions")._key = sessKey; }
+  renderDetailsTrophies(g, full);
 
   const rows = [
     [t("Categoria"), g.kind === "recompiled" ? t("Jogo recompilado (port nativo para Windows)") : t("Jogo de PC")],
@@ -760,6 +766,18 @@ function settingsModal() {
     <p class="hint">${t("Controle: direcional ou analógico para navegar, A para jogar, B para voltar, X para favoritar, Y para buscar, ☰ para as opções e ⧉ (View) para o menu rápido (volume, desligar o PC…). Segure View + ☰ (ou o botão Xbox) por 2 segundos para fechar o jogo aberto e voltar ao Modo TV.")}</p>
 
     <div class="sep"></div>
+    <div class="group-title">${t("Conquistas")}</div>
+    ${chk("ach_overlay", t("Aviso por cima do jogo"), t("Quando você desbloqueia um troféu ou conquista, aparece um aviso no canto da tela, sem tirar o foco do jogo. Em tela cheia exclusiva o jogo pode cobrir o aviso: use o modo janela sem bordas."))}
+    ${chk("ach_sound", t("Som no aviso"))}
+    <label class="field" style="margin-top:8px"><span>${t("Chave da Web API da Steam (opcional)")}</span>
+      <input class="input" id="steamkey" type="password" value="${esc(s.steam_api_key || "")}" placeholder="${t("Cole a chave aqui")}">
+      <small>${t("Só é preciso para jogos de PC que não estão na sua conta Steam e não trazem a lista de conquistas na pasta. Gere grátis em steamcommunity.com/dev/apikey.")}</small></label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn" id="ach-test">${t("Testar aviso")}</button>
+      <button class="btn" id="ach-refresh">${t("Atualizar conquistas")}</button>
+    </div>
+
+    <div class="sep"></div>
     <div class="group-title">${t("Atualizações")}</div>
     <p class="hint" style="margin-bottom:8px">${t("Versão instalada")}: <b style="color:var(--text)">${esc(state.update?.current || "")}</b>${state.update?.mode === "portable" ? " (portable)" : ""}</p>
     <div class="upd-row"><span id="upd-status" class="upd-status"></span>
@@ -814,6 +832,9 @@ function settingsModal() {
   };
   $("#sgdb").onchange = async e => { await api("save_settings", { steamgriddb_key: e.target.value.trim() }); toast(t("Chave salva. Clique em “Atualizar todas as capas”."), "ok"); };
   $("#refresh-art").onclick = async () => { await api("refresh_art", null); toast(t("Atualizando capas…")); };
+  $("#steamkey").onchange = async e => { await api("save_settings", { steam_api_key: e.target.value.trim() }); toast(t("Chave salva. Clique em “Atualizar conquistas”."), "ok"); };
+  $("#ach-test").onclick = async () => { if (!(await api("test_trophy"))) toast(t("Nenhum jogo com conquistas ainda."), "error"); };
+  $("#ach-refresh").onclick = async () => { ACH.cache = {}; ACH.overview = null; await api("refresh_achievements", null); toast(t("Atualizando conquistas…")); };
   $("#refresh-info").onclick = async () => { await api("refresh_info", null); toast(t("Atualizando informações dos jogos…")); };
   $("#restore-removed").onclick = async () => { await api("restore_removed"); toast(t("Os jogos removidos voltam após a busca."), "ok"); };
   $("#open-data").onclick = () => api("open_data_folder");
@@ -1068,7 +1089,7 @@ async function poll() {
     state.running = s.running || {};
     if (s.update) onUpdateInfo(s.update);
     state.pad = s.pad || null;
-    (s.events || []).forEach(tvHandleEvent);
+    (s.events || []).forEach(ev => { tvHandleEvent(ev); trophyHandleEvent(ev); });
     if (state.tv) renderTVHeader();
     $("#scanbar").hidden = !s.scanning;
     $("#scan-msg").textContent = s.scan_message || t("Procurando jogos…");
@@ -1123,6 +1144,7 @@ function bindEvents() {
   $("#d-folder").onclick = () => api("open_folder", state.current);
   $("#d-art").onclick = () => artModal(state.current);
   $("#d-edit").onclick = () => editModal(state.current);
+  $("#d-trophies-refresh").onclick = async () => { delete ACH.cache[state.current]; await api("refresh_achievements", state.current); toast(t("Atualizando conquistas…")); setTimeout(() => { const g = gameById(state.current); if (g) renderDetailsTrophies(g, true); }, 4000); };
   $("#d-info-refresh").onclick = async () => { await api("refresh_info", state.current); toast(t("Atualizando informações…")); };
 
   // fundo dinâmico no tema Cyberpunk
@@ -1198,6 +1220,7 @@ async function boot() {
   bindEvents();
   bindModalResize();
   bindTooltips();
+  bindTrophies();
   startGamepad();
   await reload();
   if (QP.get("page")) showPage(QP.get("page"));

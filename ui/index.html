@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="features.css">
 <link rel="stylesheet" href="tv.css">
+<link rel="stylesheet" href="trophies.css">
 <link rel="stylesheet" href="themes.css">
 <link rel="stylesheet" href="theme-cyberpunk.css">
 <link rel="stylesheet" href="theme-midnight.css">
@@ -30,6 +31,7 @@
 
       <div class="nav-label" data-i18n="Você">Você</div>
       <button class="nav-item" data-page="stats" data-i18n-title="Estatísticas"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span data-i18n="Estatísticas">Estatísticas</span></button>
+      <button class="nav-item" data-page="trophies" data-i18n-title="Conquistas"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span data-i18n="Conquistas">Conquistas</span></button>
     </nav>
 
     <div class="now-playing" id="now-playing" hidden></div>
@@ -89,6 +91,14 @@
       <div class="scroller"><div id="stats-body" class="stats"></div></div>
     </section>
 
+    <!-- Conquistas -->
+    <section id="trophies-view" class="view" hidden>
+      <header class="lib-head">
+        <div class="lib-title"><h1 data-i18n="Conquistas">Conquistas</h1><span data-i18n="Troféus da PSN e conquistas dos seus jogos">Troféus da PSN e conquistas dos seus jogos</span></div>
+      </header>
+      <div class="scroller"><div id="trophies-body" class="stats"></div></div>
+    </section>
+
     <!-- Detalhes -->
     <section id="details" class="view details" hidden>
       <div class="hero" id="d-heroWrap">
@@ -112,6 +122,10 @@
           <div class="d-section">
             <h3><span data-i18n="Sobre o jogo">Sobre o jogo</span><button class="mini-btn" id="d-info-refresh" data-i18n-title="Buscar as informações de novo"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button></h3>
             <div id="d-info" class="d-info"></div>
+          </div>
+          <div class="d-section" id="d-trophies-sec" hidden>
+            <h3><span id="d-trophies-title">Conquistas</span><button class="mini-btn" id="d-trophies-refresh" data-i18n-title="Buscar a lista de novo"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button></h3>
+            <div id="d-trophies"></div>
           </div>
           <div class="d-section">
             <h3 data-i18n="Histórico de sessões">Histórico de sessões</h3>
@@ -156,5 +170,6 @@
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="tv.js"></script>
+<script src="trophies.js"></script>
 </body>
 </html>

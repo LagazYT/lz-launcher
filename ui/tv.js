@@ -153,9 +153,10 @@ function renderTVInfo(g) {
     g.kind === "recompiled" ? `<span class="tv-chip">${t("Recompilado")}</span>` : "",
     i.year ? `<span class="tv-chip">${i.year}</span>` : "",
     i.metacritic ? `<span class="tv-chip meta">Metacritic ${i.metacritic}</span>` : "",
+    g.ach ? `<span class="tv-chip ach ${g.ach.plat ? "plat" : ""}">🏆 ${g.ach.unlocked}/${g.ach.total}</span>` : "",
     ...(i.genres || []).slice(0, 2).map(x => `<span class="tv-chip">${esc(x)}</span>`),
   ].join("");
-  const key = [g.id, running, Math.floor((state.running[g.id] || 0) / 5), g.playtime, g.favorite, TV.expanded, LANG, (g.history || []).length, !!g.info].join("|");
+  const key = [g.id, running, Math.floor((state.running[g.id] || 0) / 5), g.playtime, g.favorite, TV.expanded, LANG, (g.history || []).length, !!g.info, JSON.stringify(g.ach || null), !!ACH.cache[g.id]].join("|");
   if (info._key === key) return;
   info._key = key;
   info.innerHTML = `
@@ -167,6 +168,7 @@ function renderTVInfo(g) {
       ${tvSessionsHTML(g)}
     </div>
     ${i.description ? `<p class="tv-desc">${esc(i.description)}</p>` : ""}
+    ${TV.expanded ? tvTrophyStripHTML(g) : ""}
     ${TV.expanded && i.developers?.length ? `<p class="tv-more">${t("Desenvolvedora")}: ${esc(i.developers.join(", "))}${i.publishers?.length ? " · " + t("Publicadora") + ": " + esc(i.publishers.join(", ")) : ""}</p>` : ""}
     <div class="tv-actions"><span class="tv-btn primary"><i class="gp a">A</i>${running ? t("Jogando agora") : t("Jogar")}</span></div>`;
 }

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>LZ Launcher - Notificação</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0d12; font-family: "Segoe UI", system-ui, sans-serif; color: #fff; user-select: none; }
+  .toast {
+    position: absolute; inset: 0; display: flex; align-items: center; gap: 14px; padding: 12px 16px 12px 12px;
+    background: linear-gradient(135deg, #161a24, #0d1017); border: 1px solid rgba(255, 255, 255, .12);
+    opacity: 0; transform: translateX(30px); transition: opacity .35s ease, transform .35s ease;
+  }
+  .toast.on { opacity: 1; transform: none; }
+  .icon { width: 76px; height: 76px; border-radius: 8px; flex: none; object-fit: cover; background: #222; box-shadow: 0 0 0 2px var(--c), 0 0 22px var(--glow); }
+  .txt { min-width: 0; flex: 1; }
+  .head { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--c); }
+  .head i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+  .name { font-size: 17px; font-weight: 700; margin: 3px 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .desc { font-size: 12.5px; color: rgba(255, 255, 255, .72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot { font-size: 11px; color: rgba(255, 255, 255, .45); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--c); width: 0; }
+  .toast.on .bar { width: 100%; transition: width 6s linear; }
+  .shine { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .14) 48%, transparent 60%); transform: translateX(-100%); }
+  .toast.on .shine { transform: translateX(100%); transition: transform 1.2s ease .2s; }
+</style>
+</head>
+<body>
+<div class="toast" id="t"><div class="shine"></div>
+  <img class="icon" id="icon" alt="">
+  <div class="txt">
+    <div class="head"><i></i><span id="head"></span></div>
+    <div class="name" id="name"></div>
+    <div class="desc" id="desc"></div>
+    <div class="foot" id="foot"></div>
+  </div>
+  <div class="bar"></div>
+</div>
+<script>
+const COLORS = {
+  platinum: ["#cfe3ff", "rgba(180,210,255,.65)"], gold: ["#f5c542", "rgba(245,197,66,.55)"],
+  silver: ["#d6dbe3", "rgba(214,219,227,.45)"], bronze: ["#d38a4f", "rgba(211,138,79,.5)"],
+  steam: ["#66c0f4", "rgba(102,192,244,.45)"],
+};
+const T = {
+  pt: { trophy: "Troféu desbloqueado", platinum: "Troféu de platina!", ach: "Conquista desbloqueada", of: "{a} de {b}", rare: "{p}% dos jogadores" },
+  en: { trophy: "Trophy unlocked", platinum: "Platinum trophy!", ach: "Achievement unlocked", of: "{a} of {b}", rare: "{p}% of players" },
+  es: { trophy: "Trofeo desbloqueado", platinum: "¡Trofeo de platino!", ach: "Logro desbloqueado", of: "{a} de {b}", rare: "{p}% de los jugadores" },
+};
+let audio = null;
+function chime(platinum) {
+  try {
+    audio = audio || new AudioContext();
+    let at = audio.currentTime;
+    const notes = platinum ? [523, 659, 784, 1046] : [784, 1175];
+    for (const f of notes) {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.09, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.45);
+      o.connect(g).connect(audio.destination); o.start(at); o.stop(at + 0.5); at += 0.11;
+    }
+  } catch (e) { /* sem áudio */ }
+}
+// chamado pelo programa: showTrophy({...}, "pt", true)
+window.showTrophy = (a, lang, sound) => {
+  const tr = T[lang] || T.pt;
+  const kind = a.kind === "psn" ? (a.type || "bronze") : "steam";
+  const [c, glow] = COLORS[kind] || COLORS.steam;
+  const el = document.getElementById("t");
+  el.style.setProperty("--c", c); el.style.setProperty("--glow", glow);
+  document.getElementById("icon").src = a.icon || "icon.png";
+  document.getElementById("head").textContent = a.kind === "psn" ? (a.type === "platinum" ? tr.platinum : tr.trophy) : tr.ach;
+  document.getElementById("name").textContent = a.name || "";
+  document.getElementById("desc").textContent = a.desc || "";
+  const foot = [a.game];
+  if (a.progress) foot.push(tr.of.replace("{a}", a.progress[0]).replace("{b}", a.progress[1]));
+  if (a.rarity != null) foot.push(tr.rare.replace("{p}", a.rarity));
+  document.getElementById("foot").textContent = foot.filter(Boolean).join(" · ");
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+  if (sound) chime(a.type === "platinum");
+};
+window.hideTrophy = () => document.getElementById("t").classList.remove("on");
+</script>
+</body>
+</html>
