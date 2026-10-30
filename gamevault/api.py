@@ -89,6 +89,7 @@ class Api:
         if not g:
             return False
         allowed = {"name", "kind", "exe", "args", "favorite", "hidden", "notes", "platform_user"}
+        before = (g.get("name") or g.get("name_auto"), g.get("kind") or g.get("kind_auto"))
         for k, v in (fields or {}).items():
             if k not in allowed:
                 continue
@@ -102,6 +103,13 @@ class Api:
             except (TypeError, ValueError):
                 pass
         self._lib.store.save()
+        if (g.get("name") or g.get("name_auto"), g.get("kind") or g.get("kind_auto")) != before:
+            # nome ou tipo corrigido: a lista de conquistas pode ser outra
+            for k in ("ach_none", "steam_appid_guess"):  # o palpite de AppID veio do nome antigo
+                g.pop(k, None)
+            if g.get("ach") and not g.get("steam_appid"):
+                g.pop("ach", None)
+            self._lib.refresh_achievements(gid)
         return True
 
     def pick_exe(self, gid=None):

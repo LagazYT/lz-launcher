@@ -254,6 +254,8 @@ class Library:
             return
         new = achmod.build_list(g, gid, lang, self.store.settings.get("steam_api_key", "").strip())
         if not new:
+            if not achmod.online():
+                return  # sem internet: tenta de novo na próxima busca
             g["ach_none"] = time.time()
             g["ach_none_v"] = achmod.VERSION
             return

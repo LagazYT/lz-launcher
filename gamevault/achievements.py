@@ -221,6 +221,18 @@ def steam_guess_appid(name: str) -> int | None:
     return None
 
 
+def online() -> bool:
+    """Tem internet? (para não marcar um jogo como "sem conquistas" só porque a rede caiu)"""
+    import requests
+    for url in ("https://store.steampowered.com/", "https://www.exophase.com/"):
+        try:
+            requests.head(url, timeout=6)
+            return True
+        except requests.RequestException:
+            pass
+    return False
+
+
 def steam_global_percent(appid: int) -> dict:
     r = _get("https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/", params={"gameid": appid})
     try:
