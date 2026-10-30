@@ -55,15 +55,19 @@ class TrophyOverlay:
         if h:
             GWL_EXSTYLE = -20
             WS_EX_TOOLWINDOW, WS_EX_NOACTIVATE, WS_EX_TRANSPARENT, WS_EX_LAYERED = 0x80, 0x08000000, 0x20, 0x80000
+            WS_EX_APPWINDOW = 0x40000
+            # o Windows só tira a janela da barra de tarefas se ela estiver escondida quando o estilo muda
+            user32.ShowWindow(h, 0)  # SW_HIDE
             ex = user32.GetWindowLongW(h, GWL_EXSTYLE)
-            user32.SetWindowLongW(h, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_LAYERED)
+            ex = (ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_LAYERED) & ~WS_EX_APPWINDOW
+            user32.SetWindowLongW(h, GWL_EXSTYLE, ex)
             user32.SetLayeredWindowAttributes(h, 0, 255, 0x2)  # opaca, mas deixa os cliques passarem
             try:  # cantos arredondados no Windows 11
                 v = ctypes.c_int(2)
                 ctypes.windll.dwmapi.DwmSetWindowAttribute(h, 33, ctypes.byref(v), 4)
             except Exception:
                 pass
-            self._move(h, OFF, OFF)
+            self._move(h, OFF, OFF)  # continua escondida até ter um aviso para mostrar
             self.hwnd = h
             self.ready.set()
 
@@ -106,12 +110,14 @@ class TrophyOverlay:
             try:
                 lang = self.lang_fn()
                 sound = "true" if self.settings.get("ach_sound", True) else "false"
-                self.window.evaluate_js(f"showTrophy({json.dumps(item, ensure_ascii=False)}, {json.dumps(lang)}, {sound})")
                 x, y = self._target_position()
                 self._move(self.hwnd, x, y, show=True)
+                time.sleep(0.15)
+                self.window.evaluate_js(f"showTrophy({json.dumps(item, ensure_ascii=False)}, {json.dumps(lang)}, {sound})")
                 time.sleep(SHOW_SECONDS)
                 self.window.evaluate_js("hideTrophy()")
                 time.sleep(0.4)
+                user32.ShowWindow(self.hwnd, 0)  # SW_HIDE: some de vez, inclusive da barra de tarefas
                 self._move(self.hwnd, OFF, OFF)
                 time.sleep(0.3)
             except Exception as e:
