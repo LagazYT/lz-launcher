@@ -4,7 +4,7 @@
 
 **Criado por Lagaz** · Windows 10/11 64-bit · Português · English · Español
 
-Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC** de todas as lojas. Ele reconhece cada jogo sozinho, mostra a **capa correta** e as **informações do jogo**, conta o **tempo de jogo** e abre tudo com um clique — ou com o **controle**, no **Modo TV**, direto do sofá.
+Biblioteca e launcher que junta num lugar só os seus **jogos recompilados** (ports nativos de jogos de **PS4, PS3, Xbox** e outros consoles rodando direto no Windows) e os seus **jogos de PC** de todas as lojas. Ele reconhece cada jogo sozinho, mostra a **capa correta** e as **informações do jogo**, conta o **tempo de jogo**, mostra as **conquistas e troféus** de cada jogo e abre tudo com um clique — ou com o **controle**, no **Modo TV**, direto do sofá.
 
 ![Biblioteca](docs/screenshots/biblioteca.png)
 
@@ -74,6 +74,21 @@ Os jogos instalados por estas lojas aparecem sozinhos em **Jogos de PC** (cada u
 - **Tempo de jogo** e **última vez jogado**. O tempo é contado enquanto qualquer processo da pasta do jogo estiver aberto — funciona com ports que abrem outro processo e até quando o jogo é aberto fora do launcher.
 - **Capas e imagens de fundo automáticas**: arte do próprio jogo, loja Steam, GOG, Wikipédia (capa da caixa) e [SteamGridDB](https://www.steamgriddb.com) (chave opcional, grátis). Dá para trocar por outra opção ou por qualquer imagem do PC.
 - Favoritar, ocultar, renomear, mudar a categoria, escolher o executável e passar argumentos de inicialização.
+
+### Conquistas e troféus
+![Conquistas](docs/screenshots/conquistas.png)
+
+Cada jogo ganha a lista **oficial** de conquistas, sozinho, assim que entra na biblioteca:
+
+- **Ports recompilados de PS4/PS5**: os **troféus da PSN** (platina, ouro, prata e bronze), com os ícones oficiais tirados do próprio jogo e a raridade de cada troféu. Coletâneas, como a de Uncharted, aparecem separadas por jogo.
+- **Jogos de PC**: as **conquistas da Steam**, em português quando o jogo tem tradução, com ícones, conquistas secretas e a porcentagem de jogadores que desbloqueou cada uma. Funciona também com jogos que não vieram da Steam: o app descobre o jogo pelo nome.
+- **Jogos sem conquistas na Steam** (ports de Xbox, PS3 e outros): a lista da plataforma original.
+
+**Aviso na hora, por cima do jogo**: quando você desbloqueia uma conquista, aparece um aviso no canto da tela com som, sem tirar o foco do jogo (use o modo janela sem bordas). O desbloqueio é lido dos arquivos que o jogo grava no PC: Steam e emuladores como Goldberg/GSE, CODEX, RUNE, OnlineFix e EMPRESS. A página de cada jogo mostra de onde ele está sendo lido.
+
+![Conquistas na página do jogo](docs/screenshots/jogo-conquistas.png)
+
+Tem também a página **Conquistas**, com o total desbloqueado, platinas, os desbloqueios recentes e o progresso de cada jogo; o progresso aparece ainda nas capas e no Modo TV.
 
 ### Estatísticas
 ![Estatísticas](docs/screenshots/estatisticas.png)
@@ -148,6 +163,7 @@ O LZ Launcher **não inclui jogos** nem arquivos de jogos: ele só organiza e ab
 - [pystray](https://github.com/moses-palmer/pystray) — ícone na bandeja
 - [Pillow](https://github.com/python-pillow/Pillow) e [icoextract](https://github.com/jlu5/icoextract) — imagens e ícones dos jogos
 - Capas e informações: loja Steam, GOG, [Wikipédia](https://www.wikipedia.org), [Wikidata](https://www.wikidata.org) e [SteamGridDB](https://www.steamgriddb.com)
+- Conquistas e troféus: Steam e [Exophase](https://www.exophase.com)
 - [PyInstaller](https://pyinstaller.org) e [Inno Setup](https://jrsoftware.org/isinfo.php) — executável e instalador
 
 ## Licença
