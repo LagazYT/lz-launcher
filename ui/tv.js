@@ -56,7 +56,7 @@ function tvIcons() {
   ];
 }
 function hubRow(games) {
-  const recent = sortGames(games.filter(g => g.cover), "recent").slice(0, 4);
+  const recent = sortGames(games.filter(g => g.cover), "recent").slice(0, 3);
   const unlocked = achScore();
   return {
     id: "hub", hub: true, title: "", games: [
@@ -162,7 +162,7 @@ function renderTV() {
     if (theme() === "xbox") {
       // bloco em foco perto da esquerda, como no console (conta com o tamanho final, sem esperar a animação)
       const k = { small: .85, medium: 1, large: 1.15 }[tvPref("size", "medium")] || 1;
-      const w = innerHeight * .142 * k * (row.hub ? 2.62 : 1), gap = parseFloat(getComputedStyle(shelf).columnGap) || 0;
+      const w = innerHeight * .142 * k * (row.hub ? 2.62 : 2 / 3), gap = parseFloat(getComputedStyle(shelf).columnGap) || 0;
       const ci = +cur.dataset.ci;
       left = ci > 0 ? (ci - 1) * (w + gap) : 0;
     } else left = cur.offsetLeft - shelf.clientWidth / 2 + cur.offsetWidth / 2;
