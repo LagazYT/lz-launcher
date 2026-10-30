@@ -16,8 +16,9 @@ const ICON = {
   link: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
 };
 
-const THEMES = ["sober", "neon", "cyberpunk", "midnight"];
-const AMBIENT_THEMES = ["cyberpunk", "midnight"];
+const THEMES = ["sober", "neon", "cyberpunk", "midnight", "xbox"];
+const AMBIENT_THEMES = ["cyberpunk", "midnight", "xbox"];
+const SPOTLIGHT_THEMES = ["neon", "xbox"];
 
 const state = {
   lib: { games: [], folders: [], settings: {} },
@@ -179,6 +180,13 @@ function setAmbient(g) {
   document.documentElement.style.setProperty("--ambient", src ? `url("${src}")` : "none");
 }
 
+// total de conquistas desbloqueadas (aparece como "pontuação" no perfil do tema Xbox)
+function achScore() { return state.lib.games.reduce((s, g) => s + (g.ach?.unlocked || 0), 0); }
+function renderScore() {
+  const html = `<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>${achScore().toLocaleString(LOCALE())}`;
+  for (const id of ["#wm-score", "#tv-score"]) { const el = $(id); if (el && el._html !== html) { el.innerHTML = html; el._html = html; } }
+}
+
 /* ---------------- Filtro / ordenação ---------------- */
 function sortGames(list, sort) {
   const byName = (a, b) => a.name.localeCompare(b.name, LOCALE(), { sensitivity: "base" });
@@ -222,6 +230,7 @@ function render() {
   const shown = all.filter(g => !g.hidden);
   const inNav = g => state.nav === "all" || g.kind === state.nav;
   $("#count-all").textContent = shown.length;
+  renderScore();
   $("#count-recompiled").textContent = shown.filter(g => g.kind === "recompiled").length;
   $("#count-normal").textContent = shown.filter(g => g.kind === "normal").length;
   $("#count-favorites").textContent = shown.filter(g => g.favorite && inNav(g)).length;
@@ -257,7 +266,7 @@ function render() {
 function renderSpotlight(list) {
   const el = $("#spotlight");
   const pool = list.filter(g => !g.hidden);
-  if (theme() !== "neon" || !pool.length || state.query || state.col === "hidden") { el.hidden = true; el.dataset.key = ""; return; }
+  if (!SPOTLIGHT_THEMES.includes(theme()) || !pool.length || state.query || state.col === "hidden") { el.hidden = true; el.dataset.key = ""; return; }
   const runningId = Object.keys(state.running).find(id => pool.some(g => g.id === id));
   const played = pool.filter(g => g.last_played).sort((a, b) => b.last_played - a.last_played);
   const g = pool.find(x => x.id === runningId) || played[0] || pool.find(x => x.hero) || pool[0];
@@ -706,6 +715,7 @@ function themeOptions() {
     ["neon", "Neon", t("Roxo e ciano com destaque “Continue jogando”")],
     ["cyberpunk", "Cyberpunk", t("Amarelo neon, cantos cortados, scanlines e falhas de glitch")],
     ["midnight", "Black Midnight", t("Preto absoluto, céu estrelado, painéis de vidro e reflexo de luar nas capas")],
+    ["xbox", "Xbox", t("Inspirado na tela inicial do console: arte do jogo no fundo, blocos com borda verde e Modo TV igual ao painel")],
   ];
 }
 

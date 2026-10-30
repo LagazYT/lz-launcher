@@ -104,6 +104,20 @@
 .tv-mi em { font-style: normal; display: inline-block; width: 1.8em; }
 .tv-mi.confirm { background: #c42b1c; color: #fff; }
 
+/* elementos usados só por alguns temas (ex.: Xbox) */
+.tv-icons, .tv-score, .tv-label { display: none; }
+
+/* janela de conquistas do Modo TV */
+.tvt-list { display: grid; gap: .5em; max-height: 60vh; overflow: auto; min-width: 30em; }
+.tvt { display: flex; align-items: center; gap: .9em; padding: .5em .6em; border-radius: 8px; background: rgba(255, 255, 255, .05); }
+.tvt img { width: 3em; height: 3em; border-radius: 6px; object-fit: cover; flex: none; background: rgba(255, 255, 255, .08); }
+.tvt div { display: grid; min-width: 0; }
+.tvt b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tvt small { color: rgba(255, 255, 255, .6); font-size: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tvt-kpis { display: flex; gap: 2.4em; margin: -.3em 0 1em; }
+.tvt-kpis small { display: block; color: rgba(255, 255, 255, .6); font-size: .8em; }
+.tvt-kpis b { font-size: 1.6em; font-weight: 600; font-variant-numeric: tabular-nums; }
+
 /* ---------- variações por tema ---------- */
 [data-theme="neon"] .tv { --tv-on-bg: linear-gradient(90deg, #7c5cff, #22d3ee); --tv-on-fg: #fff; --tv-ring: #7c5cff; --tv-radius: 14px; }
 [data-theme="neon"] .tv-row.current .tv-card.focus .cover { box-shadow: 0 0 0 4px #7c5cff, 0 0 40px rgba(124, 92, 255, .55); }

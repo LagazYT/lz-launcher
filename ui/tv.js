@@ -3,7 +3,8 @@
 
 const TV = {
   row: 0, cols: {}, expanded: false, query: "",
-  overlay: null,            // null | "keyboard" | "options" | "quick"
+  overlay: null,            // null | "keyboard" | "options" | "quick" | "trophies"
+  top: null,                // tema Xbox: ícone do topo em foco (null = foco nas fileiras)
   kb: 0, menu: 0, confirm: null,
   trailerTimer: null, trailerFor: null, focusId: null,
   fx: null,
@@ -35,8 +36,57 @@ function tvRows() {
     { id: "normal", title: t("Jogos de PC"), games: by(games.filter(g => g.kind === "normal")) },
     { id: "most", title: t("Mais jogados"), games: sortGames(games.filter(g => g.playtime > 0), "playtime").slice(0, 20) },
     { id: "all", title: t("Todos os jogos"), games: by(games) },
+  ].filter(r => r.games.length);
+  if (theme() === "xbox" && rows.length) rows.splice(1, 0, hubRow(games));
+  return rows;
+}
+
+/* ---------------- Tema Xbox: atalhos e ícones do topo ---------------- */
+const XB_ICONS = {
+  library: '<svg viewBox="0 0 24 24"><path d="M4 4v16M8 4v16M12 5l4 15M16.5 4.5l4 15"/></svg>',
+  trophies: '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
+  search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  options: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
+  quick: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+};
+function tvIcons() {
+  return [
+    { id: "library", label: t("Minha biblioteca") }, { id: "trophies", label: t("Conquistas") },
+    { id: "search", label: t("Buscar") }, { id: "options", label: t("Opções do Modo TV") }, { id: "quick", label: t("Menu rápido") },
   ];
-  return rows.filter(r => r.games.length);
+}
+function hubRow(games) {
+  const recent = sortGames(games.filter(g => g.cover), "recent").slice(0, 4);
+  const unlocked = achScore();
+  return {
+    id: "hub", hub: true, title: "", games: [
+      { hub: "library", id: "hub:library", name: t("Minha biblioteca"), sub: t("{n} jogos", { n: games.length }), covers: recent.map(g => g.cover) },
+      { hub: "trophies", id: "hub:trophies", name: t("Conquistas"), sub: t("{n} desbloqueadas", { n: unlocked }), big: unlocked },
+      { hub: "search", id: "hub:search", name: t("Buscar"), sub: t("Encontre um jogo pelo nome") },
+      { hub: "options", id: "hub:options", name: t("Opções do Modo TV"), sub: t("Ordem, capas, trailers e sons") },
+    ],
+  };
+}
+function hubCardHTML(h, ri, ci) {
+  const art = h.hub === "library"
+    ? `<div class="tv-hub-art collage">${h.covers.map(c => `<img src="${c}" alt="" loading="lazy">`).join("")}</div>`
+    : h.hub === "trophies"
+      ? `<div class="tv-hub-art"><span class="big">${XB_ICONS.trophies}${h.big.toLocaleString(LOCALE())}</span></div>`
+      : `<div class="tv-hub-art">${XB_ICONS[h.hub]}</div>`;
+  return `<div class="tv-card tv-hub h-${h.hub}" data-ri="${ri}" data-ci="${ci}">${art}<div class="tv-hub-txt"><b>${esc(h.name)}</b><small>${esc(h.sub)}</small></div></div>`;
+}
+function hubRun(id) {
+  TV.top = null;
+  sfx("select");
+  if (id === "library") {
+    const rows = tvRows();
+    const i = rows.findIndex(r => r.id === "all");
+    if (i >= 0) TV.row = i;
+    renderTV();
+  } else if (id === "trophies") openOverlay("trophies");
+  else if (id === "search") openOverlay("keyboard");
+  else if (id === "options") openOverlay("options");
+  else if (id === "quick") openOverlay("quick");
 }
 function tvFocused() {
   const rows = tvRows();
@@ -54,7 +104,7 @@ function enterTV() {
   $("#tv").hidden = false;
   document.body.classList.add("tv-on");
   api("set_tv", true).catch(() => { });
-  TV.row = 0; TV.expanded = false; TV.overlay = null;
+  TV.row = 0; TV.expanded = false; TV.overlay = null; TV.top = null;
   $("#tv-rows")._html = null;
   applyTVPrefs();
   renderTV();
@@ -80,6 +130,7 @@ function applyTVPrefs() {
   const tv = $("#tv");
   tv.style.setProperty("--tv-card", (TV_SIZES[tvPref("size", "medium")] || 168) + "px");
   tv.style.setProperty("--tv-scale", tvPref("text", "normal") === "large" ? "1.2" : "1");
+  tv.style.setProperty("--tv-size-k", { small: ".85", medium: "1", large: "1.15" }[tvPref("size", "medium")] || "1");
 }
 function tvLangChanged() { $("#tv-rows")._html = null; }
 
@@ -91,10 +142,14 @@ function renderTV() {
 
   // fileiras (o HTML só é refeito quando muda algo além do foco)
   const wrap = $("#tv-rows");
-  const html = rows.map((r, ri) => `
+  const label = x => `<div class="tv-label"><b>${esc(x.name)}</b><small>${isRunning(x.id) ? t("Jogando agora") : fmtPlaytime(x.playtime)}${x.ach ? ` · 🏆 ${x.ach.unlocked}/${x.ach.total}` : ""}</small></div>`;
+  const html = rows.map((r, ri) => r.hub ? `
+    <section class="tv-row tv-hubrow" data-row="${ri}">
+      <div class="tv-shelf">${r.games.map((h, ci) => hubCardHTML(h, ri, ci)).join("")}</div>
+    </section>` : `
     <section class="tv-row" data-row="${ri}">
       <h2>${esc(r.title)} <span>${r.games.length}</span></h2>
-      <div class="tv-shelf">${r.games.map((x, ci) => `<div class="tv-card" data-ri="${ri}" data-ci="${ci}" data-name="${esc(x.name)}">${coverHTML(x)}${isRunning(x.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${x.favorite ? '<span class="tv-fav">★</span>' : ""}</div></div>`).join("")}</div>
+      <div class="tv-shelf">${r.games.map((x, ci) => `<div class="tv-card" data-ri="${ri}" data-ci="${ci}" data-name="${esc(x.name)}">${coverHTML(x)}${isRunning(x.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${x.favorite ? '<span class="tv-fav">★</span>' : ""}${label(x)}</div></div>`).join("")}</div>
     </section>`).join("") || `<div class="tv-empty">${TV.query ? t("Nenhum jogo encontrado para “{q}”.", { q: esc(TV.query) }) : t("Nenhum jogo nesta aba.")}</div>`;
   if (wrap._html !== html) { wrap.innerHTML = html; wrap._html = html; }
   $$(".tv-card.focus", wrap).forEach(c => c.classList.remove("focus"));
@@ -103,16 +158,24 @@ function renderTV() {
   if (cur) {
     cur.classList.add("focus");
     const shelf = cur.parentElement;  // rola só a fileira (sem mexer na página)
-    shelf.scrollTo({ left: cur.offsetLeft - shelf.clientWidth / 2 + cur.offsetWidth / 2, behavior: "smooth" });
+    let left;
+    if (theme() === "xbox") {
+      // bloco em foco perto da esquerda, como no console (conta com o tamanho final, sem esperar a animação)
+      const k = { small: .85, medium: 1, large: 1.15 }[tvPref("size", "medium")] || 1;
+      const w = innerHeight * .142 * k * (row.hub ? 2.62 : 1), gap = parseFloat(getComputedStyle(shelf).columnGap) || 0;
+      const ci = +cur.dataset.ci;
+      left = ci > 0 ? (ci - 1) * (w + gap) : 0;
+    } else left = cur.offsetLeft - shelf.clientWidth / 2 + cur.offsetWidth / 2;
+    shelf.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
     const rowEl = cur.closest(".tv-row");
     wrap.style.setProperty("--tv-shift", `-${rowEl.offsetTop}px`);
   }
 
-  renderTVInfo(g);
+  renderTVInfo(g && !g.hub ? g : null);
   renderTVHeader();
   renderTVHints();
   renderOverlay();
-  if (g && g.id !== TV.focusId) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
+  if (g && !g.hub && g.id !== TV.focusId) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
 }
 
 function setTVBackground(g) {
@@ -184,6 +247,11 @@ function batteryHTML() {
 const PAD_ICON = '<svg viewBox="0 0 24 24"><path d="M6 9h4M8 7v4M15 10h.01M18 8h.01M6.5 5h11a4.5 4.5 0 0 1 4.4 5.4l-1 5A3 3 0 0 1 16 17l-2-2h-4l-2 2a3 3 0 0 1-4.9-1.6l-1-5A4.5 4.5 0 0 1 6.5 5Z"/></svg>';
 
 function renderTVHeader() {
+  if (theme() === "xbox") {
+    const icons = tvIcons().map((ic, i) => `<button class="tv-ico ${TV.top === i ? "focus" : ""}" data-top="${ic.id}" title="${esc(ic.label)}">${XB_ICONS[ic.id]}</button>`).join("");
+    const nav = $("#tv-icons");
+    if (nav._html !== icons) { nav.innerHTML = icons; nav._html = icons; }
+  }
   $("#tv-search-chip").innerHTML = TV.query ? `<span class="tv-chip search">🔍 ${esc(TV.query)} <i class="gp b">B</i></span>` : "";
   const html = batteryHTML();
   const el = $("#tv-battery");
@@ -192,7 +260,7 @@ function renderTVHeader() {
 
 function renderTVHints() {
   const { game: g } = tvFocused();
-  const hints = TV.overlay ? [] : [
+  const hints = TV.overlay ? [] : (TV.top !== null || g?.hub) ? [["a", "A", t("Abrir")], ["b", "B", TV.top !== null ? t("Voltar") : t("Sair do Modo TV")]] : [
     ["a", "A", t("Jogar")], ["x", "X", g?.favorite ? t("Remover favorito") : t("Favoritar")], ["y", "Y", t("Buscar")],
     ["gp-start", "☰", t("Opções")], ["gp-view", "⧉", t("Menu rápido")], ["b", "B", TV.query ? t("Limpar busca") : t("Sair do Modo TV")],
   ];
@@ -257,6 +325,17 @@ function renderOverlay() {
       <div class="tv-mi ${i === TV.menu ? "focus" : ""}" data-menu="${i}">
         <span>${o.label}</span>${o.action ? "" : `<b><i>‹</i>${esc(o.value)}<i>›</i></b>`}</div>`).join("")}
       <div class="kb-hints"><span><i class="gp a">A</i>${t("Alterar")}</span><span><i class="gp b">B</i>${t("Fechar")}</span></div></div>`;
+  } else if (TV.overlay === "trophies") {
+    const o = ACH.overview;
+    const games = o ? o.games : [];
+    const plats = games.filter(x => x.plat).length;
+    const done = games.filter(x => x.total && x.unlocked === x.total).length;
+    html = `<div class="tv-panel tvtrophies"><h2>${t("Conquistas")} <span class="tv-clock-sm">🏆 ${achScore().toLocaleString(LOCALE())}</span></h2>
+      ${!o ? `<div class="loading"><span class="spinner"></span>${t("Carregando…")}</div>` : `
+      <div class="tvt-kpis"><div><small>${t("Desbloqueadas")}</small><b>${achScore()}</b></div><div><small>${t("Platinas")}</small><b>${plats}</b></div><div><small>${t("Jogos 100%")}</small><b>${done}</b></div><div><small>${t("Jogos com conquistas")}</small><b>${games.length}</b></div></div>
+      ${o.recent.length ? `<div class="tvt-list">${o.recent.slice(0, 8).map(r => `<div class="tvt">${r.icon ? `<img src="${esc(r.icon)}" alt="">` : "<img alt=\"\">"}<div><b>${esc(r.name)}</b><small>${esc(r.game)}${r.ts > 1e9 ? " · " + fmtDate(r.ts) : ""}</small></div></div>`).join("")}</div>`
+        : `<p class="tv-empty" style="padding:0">${t("Nenhuma conquista desbloqueada ainda.")}</p>`}`}
+      <div class="kb-hints"><span><i class="gp b">B</i>${t("Fechar")}</span></div></div>`;
   } else if (TV.overlay === "quick") {
     const items = quickItems();
     html = `<div class="tv-panel tvmenu tvquick"><h2>${t("Menu rápido")} <span class="tv-clock-sm">${new Date().toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" })}</span></h2>
@@ -270,6 +349,7 @@ function renderOverlay() {
 function openOverlay(kind) {
   TV.overlay = kind; TV.menu = 0; TV.confirm = null;
   if (kind === "keyboard") TV.kb = 0;
+  if (kind === "trophies") api("achievements_overview").then(o => { ACH.overview = o; if (TV.overlay === "trophies") renderTV(); }).catch(() => { });
   sfx("open");
   renderTV();
 }
@@ -340,6 +420,10 @@ function tvAction(act) {
     else return;
     sfx("move"); renderTV(); return;
   }
+  if (TV.overlay === "trophies") {
+    if (act === "a" || act === "b" || act === "start") closeOverlay();
+    return;
+  }
   if (TV.overlay === "options" || TV.overlay === "quick") {
     const items = TV.overlay === "options" ? optionItems() : quickItems();
     if (act === "up") { TV.menu = (TV.menu + items.length - 1) % items.length; TV.confirm = null; sfx("move"); }
@@ -350,16 +434,27 @@ function tvAction(act) {
     else if (TV.overlay === "quick" && (act === "left" || act === "right") && items[TV.menu].id.startsWith("vol")) { api("system_volume", act === "left" ? "down" : "up"); return; }
     renderTV(); return;
   }
+  if (TV.top !== null) {  // tema Xbox: ícones do topo
+    const n = tvIcons().length;
+    if (act === "left") { TV.top = Math.max(0, TV.top - 1); sfx("move"); }
+    else if (act === "right") { TV.top = Math.min(n - 1, TV.top + 1); sfx("move"); }
+    else if (act === "down" || act === "b") { TV.top = null; sfx("move"); }
+    else if (act === "a") { hubRun(tvIcons()[TV.top].id); return; }
+    else if (["y", "start", "select", "guide"].includes(act)) { TV.top = null; }
+    else return;
+    if (TV.top !== null) { renderTV(); return; }
+    if (!["y", "start", "select", "guide"].includes(act)) { renderTV(); return; }
+  }
   const { rows, row, game: g, col } = tvFocused();
   switch (act) {
     case "left": if (row && col > 0) { TV.cols[row.id] = col - 1; sfx("move"); } TV.expanded = false; break;
     case "right": if (row && col < row.games.length - 1) { TV.cols[row.id] = col + 1; sfx("move"); } TV.expanded = false; break;
-    case "up": if (TV.row > 0) { TV.row--; sfx("move"); } else if (!TV.expanded) { TV.expanded = true; sfx("move"); } break;
+    case "up": if (TV.row > 0) { TV.row--; sfx("move"); } else if (theme() === "xbox") { TV.top = 0; sfx("move"); } else if (!TV.expanded) { TV.expanded = true; sfx("move"); } break;
     case "down": if (TV.expanded) TV.expanded = false; else if (TV.row < rows.length - 1) { TV.row++; sfx("move"); } break;
     case "lb": if (TV.row > 0) { TV.row--; sfx("move"); } break;
     case "rb": if (TV.row < rows.length - 1) { TV.row++; sfx("move"); } break;
-    case "a": if (g) { sfx("select"); playGame(g.id); } break;
-    case "x": if (g) { sfx("select"); toggleFav(g.id); } break;
+    case "a": if (g?.hub) { hubRun(g.hub); return; } if (g) { sfx("select"); playGame(g.id); } break;
+    case "x": if (g && !g.hub) { sfx("select"); toggleFav(g.id); } break;
     case "y": openOverlay("keyboard"); return;
     case "start": openOverlay("options"); return;
     case "select": case "guide": openOverlay("quick"); return;
@@ -399,6 +494,8 @@ function bindTV() {
   $("#tv").addEventListener("click", e => {
     sfxUnlock();
     if (e.target.closest("#tv-exit")) { exitTV(); return; }
+    const top = e.target.closest("[data-top]");
+    if (top) { hubRun(top.dataset.top); return; }
     const kb = e.target.closest("[data-kb]");
     if (kb) { TV.kb = +kb.dataset.kb; kbPress(TV.kb); return; }
     const mi = e.target.closest("[data-menu]");
@@ -485,7 +582,7 @@ function sfx(kind) {
 /* ---------------- Fundo animado (partículas / scanlines conforme o tema) ---------------- */
 function fxStart() {
   fxStop();
-  if (!state.tv || !tvSetting("tv_fx")) return;
+  if (!state.tv || !tvSetting("tv_fx") || theme() === "xbox") return;
   const canvas = $("#tv-fx");
   const ctx = canvas.getContext("2d");
   const th = theme();

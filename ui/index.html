@@ -11,12 +11,13 @@
 <link rel="stylesheet" href="themes.css">
 <link rel="stylesheet" href="theme-cyberpunk.css">
 <link rel="stylesheet" href="theme-midnight.css">
+<link rel="stylesheet" href="theme-xbox.css">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("lz_theme") || "sober"; } catch (e) { }</script>
 </head>
 <body>
 <div id="app">
   <aside class="sidebar">
-    <div class="wordmark"><img src="icon.png" alt=""><span>LZ Launcher</span></div>
+    <div class="wordmark"><img src="icon.png" alt=""><span>LZ Launcher</span><div class="wm-score" id="wm-score"></div></div>
 
     <nav class="nav" id="nav">
       <div class="nav-label" data-i18n="Biblioteca">Biblioteca</div>
@@ -146,7 +147,8 @@
     <canvas id="tv-fx" class="tv-fx" hidden></canvas>
     <div class="tv-shade"></div>
     <header class="tv-top">
-      <div class="tv-logo"><img src="icon.png" alt=""><span>LZ Launcher</span></div>
+      <div class="tv-logo"><img src="icon.png" alt=""><div class="tv-who"><span>LZ Launcher</span><small class="tv-score" id="tv-score"></small></div></div>
+      <nav class="tv-icons" id="tv-icons"></nav>
       <div class="tv-search" id="tv-search-chip"></div>
       <div class="tv-right"><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     </header>

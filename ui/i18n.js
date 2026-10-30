@@ -343,6 +343,12 @@ const I18N = {
     "Desbloqueio": "Unlocks",
     "nada gravado ainda": "nothing saved yet",
     "Nem a Steam nem um emulador gravou conquistas deste jogo no PC. Quando algum deles gravar, o LZ Launcher passa a detectar sozinho.": "Neither Steam nor an emulator has saved achievements for this game on this PC. As soon as one does, LZ Launcher detects it automatically.",
+    "Inspirado na tela inicial do console: arte do jogo no fundo, blocos com borda verde e Modo TV igual ao painel": "Inspired by the console home screen: game art in the background, tiles with a green border and a TV Mode that looks like the dashboard",
+    "Minha biblioteca": "My library",
+    "{n} desbloqueadas": "{n} unlocked",
+    "Encontre um jogo pelo nome": "Find a game by name",
+    "Ordem, capas, trailers e sons": "Order, covers, trailers and sounds",
+    "Jogos 100%": "Games at 100%",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -681,6 +687,12 @@ const I18N = {
     "Desbloqueio": "Desbloqueo",
     "nada gravado ainda": "nada guardado aún",
     "Nem a Steam nem um emulador gravou conquistas deste jogo no PC. Quando algum deles gravar, o LZ Launcher passa a detectar sozinho.": "Ni Steam ni un emulador ha guardado logros de este juego en el PC. Cuando alguno lo haga, LZ Launcher lo detectará solo.",
+    "Inspirado na tela inicial do console: arte do jogo no fundo, blocos com borda verde e Modo TV igual ao painel": "Inspirado en la pantalla de inicio de la consola: arte del juego de fondo, bloques con borde verde y Modo TV igual al panel",
+    "Minha biblioteca": "Mi biblioteca",
+    "{n} desbloqueadas": "{n} desbloqueados",
+    "Encontre um jogo pelo nome": "Encuentra un juego por su nombre",
+    "Ordem, capas, trailers e sons": "Orden, portadas, tráileres y sonidos",
+    "Jogos 100%": "Juegos al 100%",
   },
 };
 
