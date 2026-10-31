@@ -268,7 +268,7 @@
 [data-theme="ps5"] .ps-ring .bg { stroke: rgba(255, 255, 255, .18); }
 [data-theme="ps5"] .ps-ring .fg { stroke: #40d97a; stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
 
-[data-theme="ps5"] .ps-cards { height: 47vh; overflow: hidden; padding: 0 0 3vh; flex: none; }
+[data-theme="ps5"] .ps-cards { height: 48.5vh; overflow: hidden; padding: 1.2vh 0 3vh; flex: none; }  /* folga para o contorno de foco não ser cortado */
 [data-theme="ps5"] .ps-grid {
   height: 100%; display: grid; grid-template-columns: repeat(4, 26.5vw); grid-template-rows: repeat(3, 1fr); gap: 2.2vh 1.3vw;
   padding-left: var(--ps-x); width: max-content; transition: transform .3s cubic-bezier(.2, .8, .2, 1);
@@ -278,7 +278,7 @@
   position: relative; overflow: hidden; border-radius: 1.3vh; background: rgba(24, 28, 38, .8); backdrop-filter: blur(20px);
   cursor: pointer; transition: box-shadow .15s; min-height: 0;
 }
-[data-theme="ps5"] .ps-card.focus { box-shadow: 0 0 0 3px #fff, 0 0 30px var(--ps-glow); }
+[data-theme="ps5"] .ps-card.focus { outline: 3px solid #fff; outline-offset: .45vh; box-shadow: 0 0 3vh var(--ps-glow); }  /* contorno com folga, igual ao do console */
 [data-theme="ps5"] .ps-card:hover:not(.focus) { background: rgba(34, 40, 54, .86); }
 [data-theme="ps5"] .ps-card-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .6; }
 [data-theme="ps5"] .ps-card-bg + .ps-card-in { background: linear-gradient(0deg, rgba(10, 12, 18, .92), rgba(10, 12, 18, .2) 70%); }

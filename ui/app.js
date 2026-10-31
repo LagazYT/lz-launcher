@@ -1241,6 +1241,7 @@ async function boot() {
     if (g && QP.get("sec") === "trophies") setTimeout(() => { const s = $("#d-trophies-sec"); s.scrollIntoView(); let p = s.parentElement; while (p && p.scrollHeight <= p.clientHeight + 5) p = p.parentElement; if (p) p.scrollTop -= 90; }, 2500);
   }
   if (QP.get("tv") || (state.lib.settings.tv_on_start && !QP.get("page") && !QP.get("game"))) enterTV();
+  if (state.tv && QP.get("pscard") && typeof PS !== "undefined") { PS.zone = "cards"; PS.card = +QP.get("pscard"); renderTV(); }
   if (state.tv && QP.get("tvov")) { if (QP.get("q")) TV.query = QP.get("q"); openOverlay(QP.get("tvov")); }
   if (QP.get("settings")) settingsModal();
   poll();
