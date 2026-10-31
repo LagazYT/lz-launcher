@@ -28,6 +28,7 @@ DEFAULT_SETTINGS = {
     "steamgriddb_key": "",
     "track_external": True,
     "profile_name": "",
+    "profile_avatar": "",
     "minimize_on_launch": False,
     "close_to_tray": True,
     "theme": "sober",

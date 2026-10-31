@@ -31,6 +31,18 @@ class Api:
         res = self._window.create_file_dialog(webview.FileDialog.FOLDER)
         return res[0] if res else None
 
+    # --- perfil ---------------------------------------------------------------
+    def pick_avatar(self):
+        res = self._window.create_file_dialog(
+            webview.FileDialog.OPEN, file_types=("Imagens (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif)", "Todos os arquivos (*.*)"))
+        if not res:
+            return None
+        return self._lib.avatar_url() if self._lib.set_avatar(res[0]) else False
+
+    def remove_avatar(self):
+        self._lib.clear_avatar()
+        return True
+
     def add_folder(self, path, mode="auto"):
         if not path or not os.path.isdir(path):
             return {"ok": False, "error": tr("Pasta inválida.", self._lib.lang())}

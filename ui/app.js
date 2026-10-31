@@ -184,7 +184,13 @@ function setAmbient(g) {
 function achScore() { return state.lib.games.reduce((s, g) => s + (g.ach?.unlocked || 0), 0); }
 // nome escolhido pelo usuário (no lugar de "LZ Launcher" na barra lateral e no Modo TV)
 function profileName() { return (state.lib.settings.profile_name || "").trim() || "LZ Launcher"; }
+function avatarSrc() { return state.lib.avatar || "icon.png"; }
 function renderProfileName() {
+  const src = avatarSrc();
+  for (const id of ["#wm-avatar", "#tv-avatar"]) {
+    const el = $(id);
+    if (el && el.getAttribute("src") !== src) { el.src = src; el.classList.toggle("photo", !!state.lib.avatar); }
+  }
   const n = profileName();
   for (const id of ["#wm-name", "#tv-name"]) { const el = $(id); if (el && el.textContent !== n) el.textContent = n; }
 }
@@ -736,6 +742,11 @@ function settingsModal() {
     <label class="field" style="max-width:360px"><span>${t("Seu nome")}</span>
       <input class="input" id="profile-name" maxlength="24" value="${esc(s.profile_name || "")}" placeholder="LZ Launcher" autocomplete="off">
       <small>${t("Aparece no lugar de “LZ Launcher” na barra lateral e no Modo TV. Deixe em branco para usar o nome do app.")}</small></label>
+    <div class="avatar-row">
+      <img class="avatar-prev ${state.lib.avatar ? "photo" : ""}" id="avatar-prev" src="${avatarSrc()}" alt="">
+      <div><div class="avatar-btns"><button class="btn" id="avatar-pick">${t("Escolher foto…")}</button>${state.lib.avatar ? `<button class="btn" id="avatar-del">${t("Remover foto")}</button>` : ""}</div>
+      <small class="hint" style="margin:6px 0 0">${t("A imagem é recortada em quadrado, no centro.")}</small></div>
+    </div>
 
     <div class="sep"></div>
     <div class="group-title">${t("Idioma")}</div>
@@ -853,6 +864,21 @@ function settingsModal() {
     if (rm && confirm(t("Remover essa pasta da biblioteca? Os arquivos dos jogos não são apagados."))) {
       await api("remove_folder", rm.dataset.frm); await reload(); settingsModal();
     }
+  };
+  $("#avatar-pick").onclick = async () => {
+    const url = await api("pick_avatar");
+    if (url === false) { toast(t("Não foi possível abrir essa imagem."), "error"); return; }
+    if (!url) return;
+    state.lib.avatar = url;
+    renderProfileName(); renderTV && state.tv && renderTV();
+    const y = $("#modal-body").scrollTop; settingsModal(); $("#modal-body").scrollTop = y;
+    toast(t("Foto de perfil atualizada."), "ok");
+  };
+  if ($("#avatar-del")) $("#avatar-del").onclick = async () => {
+    await api("remove_avatar");
+    state.lib.avatar = null;
+    renderProfileName();
+    const y = $("#modal-body").scrollTop; settingsModal(); $("#modal-body").scrollTop = y;
   };
   $("#profile-name").onchange = async e => {
     const v = e.target.value.trim().slice(0, 24);

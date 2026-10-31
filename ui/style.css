@@ -43,6 +43,11 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .wordmark { cursor: pointer; min-width: 0; }
 .wordmark span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wordmark img { width: 28px; height: 28px; }
+.wordmark img.photo, .tv-logo img.photo, .avatar-prev.photo { border-radius: 50%; object-fit: cover; }
+.avatar-row { display: flex; align-items: center; gap: 14px; margin: -2px 0 6px; }
+.avatar-prev { width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--panel-2); padding: 8px; box-shadow: 0 0 0 1px var(--line-2); }
+.avatar-prev.photo { padding: 0; }
+.avatar-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .wm-score { display: none; }
 .nav { padding: 4px 8px; overflow-y: auto; }
 .nav-label { font-size: 11px; color: var(--text-3); padding: 14px 10px 6px; font-weight: 600; }

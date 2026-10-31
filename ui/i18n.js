@@ -370,6 +370,12 @@ const I18N = {
     "Nome salvo: {n}": "Name saved: {n}",
     "Voltou para “LZ Launcher”.": "Back to “LZ Launcher”.",
     "Mudar seu nome": "Change your name",
+    "Mudar seu nome e foto": "Change your name and picture",
+    "Escolher foto…": "Choose picture…",
+    "Remover foto": "Remove picture",
+    "A imagem é recortada em quadrado, no centro.": "The image is cropped to a square, centered.",
+    "Não foi possível abrir essa imagem.": "Couldn't open that image.",
+    "Foto de perfil atualizada.": "Profile picture updated.",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -735,6 +741,12 @@ const I18N = {
     "Nome salvo: {n}": "Nombre guardado: {n}",
     "Voltou para “LZ Launcher”.": "Volvió a “LZ Launcher”.",
     "Mudar seu nome": "Cambiar tu nombre",
+    "Mudar seu nome e foto": "Cambiar tu nombre y foto",
+    "Escolher foto…": "Elegir foto…",
+    "Remover foto": "Quitar foto",
+    "A imagem é recortada em quadrado, no centro.": "La imagen se recorta en cuadrado, centrada.",
+    "Não foi possível abrir essa imagem.": "No se pudo abrir esa imagen.",
+    "Foto de perfil atualizada.": "Foto de perfil actualizada.",
   },
 };
 

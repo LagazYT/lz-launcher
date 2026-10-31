@@ -225,6 +225,8 @@
 [data-theme="ps5"] .ps-ico svg { width: 3vh; height: 3vh; stroke-width: 2; }
 [data-theme="ps5"] .ps-ico:hover { background: rgba(255, 255, 255, .12); }
 [data-theme="ps5"] .ps-ico.avatar img { width: 4.6vh; height: 4.6vh; border-radius: 50%; padding: .5vh; background: radial-gradient(circle at 35% 30%, #2a4f9e, #0b1a3d 70%); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
+[data-theme="ps5"] .ps-ico.avatar img.photo { padding: 0; object-fit: cover; }
+[data-theme="ps5"] .wordmark img.photo { width: 32px; height: 32px; }
 [data-theme="ps5"] .ps-ico.focus { box-shadow: 0 0 0 3px #fff, 0 0 20px var(--ps-glow); background: rgba(0, 0, 0, .35); }
 [data-theme="ps5"] .tv-clock { font-size: 3.6vh; font-weight: 300; letter-spacing: .5px; }
 [data-theme="ps5"] .tv-pad { font-size: 2.2vh; }

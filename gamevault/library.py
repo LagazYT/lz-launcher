@@ -694,6 +694,38 @@ class Library:
             return "PC"
         return plat
 
+    # ------------------------------------------------------------------ perfil
+    def avatar_url(self) -> str | None:
+        p = self.store.settings.get("profile_avatar")
+        if not p or not os.path.isfile(p):
+            return None
+        return f"/local/{self.local_token(p)}?v={int(os.path.getmtime(p))}"
+
+    def set_avatar(self, src: str) -> bool:
+        """Foto de perfil: recorta no centro em quadrado e guarda uma cópia de 256 px nos dados do app."""
+        from PIL import Image, ImageOps
+        from .paths import data_dir
+        try:
+            with Image.open(src) as im:
+                im = ImageOps.exif_transpose(im)
+                im.seek(0)
+                im = im.convert("RGB")
+                side = min(im.size)
+                left, top = (im.width - side) // 2, (im.height - side) // 2
+                im = im.crop((left, top, left + side, top + side)).resize((256, 256), Image.LANCZOS)
+                out = data_dir() / "avatar.png"
+                im.save(out, "PNG")
+        except Exception as e:
+            log.warning("avatar: %s", e)
+            return False
+        self.store.settings["profile_avatar"] = str(out)
+        self.store.save()
+        return True
+
+    def clear_avatar(self):
+        self.store.settings["profile_avatar"] = ""
+        self.store.save()
+
     def snapshot(self) -> dict:
         with self.store.lock:
             games = [self.to_ui(gid, g) for gid, g in self.store.games.items() if not g.get("missing")]
@@ -701,6 +733,7 @@ class Library:
             "games": games,
             "folders": self.store.folders,
             "settings": self.store.settings,
+            "avatar": self.avatar_url(),
             "revision": self.store.revision,
             "lang": self.lang(),
         }
