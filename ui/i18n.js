@@ -364,6 +364,12 @@ const I18N = {
     "total de {t}": "{t} in total",
     "Atividade recente": "Recent activity",
     "+{n} discos": "+{n} drives",
+    "Perfil": "Profile",
+    "Seu nome": "Your name",
+    "Aparece no lugar de “LZ Launcher” na barra lateral e no Modo TV. Deixe em branco para usar o nome do app.": "Shown instead of “LZ Launcher” in the sidebar and in TV Mode. Leave it blank to use the app name.",
+    "Nome salvo: {n}": "Name saved: {n}",
+    "Voltou para “LZ Launcher”.": "Back to “LZ Launcher”.",
+    "Mudar seu nome": "Change your name",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -723,6 +729,12 @@ const I18N = {
     "total de {t}": "{t} en total",
     "Atividade recente": "Actividad reciente",
     "+{n} discos": "+{n} discos",
+    "Perfil": "Perfil",
+    "Seu nome": "Tu nombre",
+    "Aparece no lugar de “LZ Launcher” na barra lateral e no Modo TV. Deixe em branco para usar o nome do app.": "Aparece en lugar de “LZ Launcher” en la barra lateral y en el Modo TV. Déjalo en blanco para usar el nombre de la app.",
+    "Nome salvo: {n}": "Nombre guardado: {n}",
+    "Voltou para “LZ Launcher”.": "Volvió a “LZ Launcher”.",
+    "Mudar seu nome": "Cambiar tu nombre",
   },
 };
 

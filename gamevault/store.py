@@ -27,6 +27,7 @@ DEFAULT_SETTINGS = {
     "online_art": True,
     "steamgriddb_key": "",
     "track_external": True,
+    "profile_name": "",
     "minimize_on_launch": False,
     "close_to_tray": True,
     "theme": "sober",

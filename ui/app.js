@@ -182,7 +182,14 @@ function setAmbient(g) {
 
 // total de conquistas desbloqueadas (aparece como "pontuação" no perfil do tema Xbox)
 function achScore() { return state.lib.games.reduce((s, g) => s + (g.ach?.unlocked || 0), 0); }
+// nome escolhido pelo usuário (no lugar de "LZ Launcher" na barra lateral e no Modo TV)
+function profileName() { return (state.lib.settings.profile_name || "").trim() || "LZ Launcher"; }
+function renderProfileName() {
+  const n = profileName();
+  for (const id of ["#wm-name", "#tv-name"]) { const el = $(id); if (el && el.textContent !== n) el.textContent = n; }
+}
 function renderScore() {
+  renderProfileName();
   const html = `<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>${achScore().toLocaleString(LOCALE())}`;
   for (const id of ["#wm-score", "#tv-score"]) { const el = $(id); if (el && el._html !== html) { el.innerHTML = html; el._html = html; } }
 }
@@ -725,6 +732,12 @@ function settingsModal() {
   const folders = state.lib.folders;
   const chk = (key, title, desc = "") => `<label class="check"><input type="checkbox" data-set="${key}" ${s[key] ? "checked" : ""}><span>${title}${desc ? `<small>${desc}</small>` : ""}</span></label>`;
   openModal(t("Configurações"), `
+    <div class="group-title">${t("Perfil")}</div>
+    <label class="field" style="max-width:360px"><span>${t("Seu nome")}</span>
+      <input class="input" id="profile-name" maxlength="24" value="${esc(s.profile_name || "")}" placeholder="LZ Launcher" autocomplete="off">
+      <small>${t("Aparece no lugar de “LZ Launcher” na barra lateral e no Modo TV. Deixe em branco para usar o nome do app.")}</small></label>
+
+    <div class="sep"></div>
     <div class="group-title">${t("Idioma")}</div>
     <select class="select input" id="set-lang" style="max-width:280px">
       <option value="auto" ${(s.language || "auto") === "auto" ? "selected" : ""}>${t("Automático (idioma do Windows)")}</option>
@@ -840,6 +853,14 @@ function settingsModal() {
     if (rm && confirm(t("Remover essa pasta da biblioteca? Os arquivos dos jogos não são apagados."))) {
       await api("remove_folder", rm.dataset.frm); await reload(); settingsModal();
     }
+  };
+  $("#profile-name").onchange = async e => {
+    const v = e.target.value.trim().slice(0, 24);
+    e.target.value = v;
+    state.lib.settings.profile_name = v;
+    renderProfileName();
+    await api("save_settings", { profile_name: v });
+    toast(v ? t("Nome salvo: {n}", { n: v }) : t("Voltou para “LZ Launcher”."), "ok");
   };
   $("#sgdb").onchange = async e => { await api("save_settings", { steamgriddb_key: e.target.value.trim() }); toast(t("Chave salva. Clique em “Atualizar todas as capas”."), "ok"); };
   $("#refresh-art").onclick = async () => { await api("refresh_art", null); toast(t("Atualizando capas…")); };
@@ -1139,6 +1160,7 @@ function bindEvents() {
   $("#btn-add").onclick = e => { e.stopPropagation(); $("#menu-add").hidden = !$("#menu-add").hidden; };
   $("#btn-rescan").onclick = async () => { await api("rescan", false); toast(t("Procurando jogos novos…")); };
   $("#btn-settings").onclick = settingsModal;
+  $("#wordmark").onclick = () => { settingsModal(); const el = $("#profile-name"); if (el) { el.focus(); el.select(); } };
   $("#btn-tv").onclick = enterTV;
   $("#modal-close").onclick = closeModal;
   // fecha ao clicar fora, mas não quando o clique termina fora depois de arrastar/selecionar dentro da janela

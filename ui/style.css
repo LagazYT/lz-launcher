@@ -40,6 +40,8 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 /* ---------- Sidebar ---------- */
 .sidebar { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 .wordmark { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; font-size: 15px; font-weight: 600; }
+.wordmark { cursor: pointer; min-width: 0; }
+.wordmark span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wordmark img { width: 28px; height: 28px; }
 .wm-score { display: none; }
 .nav { padding: 4px 8px; overflow-y: auto; }

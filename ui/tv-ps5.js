@@ -136,7 +136,7 @@ function renderPS5() {
   const iconsHTML = top.slice(psTabs().length).map((x, k) => {
     const i = k + psTabs().length;
     const inner = x.id === "quick" ? `<img src="icon.png" alt="">` : PS_ICONS[x.id];
-    return `<button class="ps-ico ${x.id === "quick" ? "avatar" : ""} ${PS.zone === "top" && PS.top === i ? "focus" : ""}" data-pstop="${i}" title="${esc(x.id === "search" ? t("Buscar") : x.id === "options" ? t("Opções do Modo TV") : t("Menu rápido"))}">${inner}</button>`;
+    return `<button class="ps-ico ${x.id === "quick" ? "avatar" : ""} ${PS.zone === "top" && PS.top === i ? "focus" : ""}" data-pstop="${i}" title="${esc(x.id === "search" ? t("Buscar") : x.id === "options" ? t("Opções do Modo TV") : profileName() + " · " + t("Menu rápido"))}">${inner}</button>`;
   }).join("");
   setHTMLonce($("#tv-ps-actions"), iconsHTML);
 
