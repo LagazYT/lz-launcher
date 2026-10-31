@@ -623,6 +623,7 @@ async function playGame(id) {
   if (!g) return;
   if (isRunning(id)) { if (!state.tv) openDetails(id); return; }
   const res = await api("launch", id, false);
+  if (res && res.ok && state.tv) stopTrailer();  // nada de trailer tocando atrás do jogo
   if (res && res.ok) toast(t("Iniciando {name}…", { name: g.name }), "ok");
   else toast(res?.error || t("Não foi possível iniciar o jogo."), "error");
 }
@@ -825,7 +826,7 @@ function settingsModal() {
     <div class="sep"></div>
     <div class="group-title">${t("Janela")}</div>
     ${chk("close_to_tray", t("Ao fechar, minimizar para a bandeja do sistema"), t("O LZ Launcher continua rodando perto do relógio e segue contando o tempo de jogo. Para sair de vez, use “Sair” no ícone da bandeja."))}
-    ${chk("minimize_on_launch", t("Minimizar ao iniciar um jogo"))}
+    ${chk("minimize_on_launch", t("Minimizar ao iniciar um jogo"), t("Não vale no Modo TV: lá o app fica atrás do jogo e volta sozinho quando ele fecha"))}
     ${chk("track_external", t("Contar tempo de jogos abertos fora do LZ Launcher"), t("Funciona enquanto o LZ Launcher estiver aberto ou na bandeja"))}
 
     <div class="sep"></div>

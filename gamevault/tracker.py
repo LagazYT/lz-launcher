@@ -13,6 +13,7 @@ import psutil
 from .paths import norm
 
 POLL = 4.0
+POLL_PLAYING = 1.0  # com jogo aberto: percebe na hora quando ele fecha
 HISTORY_MAX = 400      # sessões guardadas por jogo
 MIN_SESSION = 10       # segundos; sessões menores são ignoradas no histórico
 
@@ -88,9 +89,9 @@ class PlayTracker:
     def _loop(self):
         last = time.time()
         save_counter = 0
-        while not self._stop.wait(POLL):
+        while not self._stop.wait(POLL_PLAYING if self.running or self._pending else POLL):
             now = time.time()
-            delta = min(now - last, POLL * 3)
+            delta = min(now - last, POLL * 3)  # tempo real passado (vale para os dois intervalos)
             last = now
             try:
                 found = self._scan()

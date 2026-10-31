@@ -376,6 +376,7 @@ const I18N = {
     "A imagem é recortada em quadrado, no centro.": "The image is cropped to a square, centered.",
     "Não foi possível abrir essa imagem.": "Couldn't open that image.",
     "Foto de perfil atualizada.": "Profile picture updated.",
+    "Não vale no Modo TV: lá o app fica atrás do jogo e volta sozinho quando ele fecha": "Doesn't apply in TV Mode: there the app stays behind the game and comes back on its own when it closes",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -747,6 +748,7 @@ const I18N = {
     "A imagem é recortada em quadrado, no centro.": "La imagen se recorta en cuadrado, centrada.",
     "Não foi possível abrir essa imagem.": "No se pudo abrir esa imagen.",
     "Foto de perfil atualizada.": "Foto de perfil actualizada.",
+    "Não vale no Modo TV: lá o app fica atrás do jogo e volta sozinho quando ele fecha": "No se aplica en el Modo TV: ahí la app queda detrás del juego y vuelve sola cuando se cierra",
   },
 };
 

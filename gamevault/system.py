@@ -88,24 +88,34 @@ def power(action: str) -> bool:
 
 
 # --- trazer a janela do app para a frente -------------------------------------------
-def bring_to_front(title: str = APP_NAME) -> bool:
+def bring_to_front(title: str = APP_NAME, hwnd: int | None = None) -> bool:
+    """Traz a janela para a frente e dá o foco a ela, mesmo com outro programa (o jogo) em primeiro plano."""
     if not user32:
         return False
-    hwnd = user32.FindWindowW(None, title)
+    from ctypes import wintypes
+    hwnd = hwnd or user32.FindWindowW(None, title)
     if not hwnd:
         return False
-    SW_RESTORE = 9
-    if user32.IsIconic(hwnd):
-        user32.ShowWindow(hwnd, SW_RESTORE)
-    else:
-        user32.ShowWindow(hwnd, 5)  # SW_SHOW
-    # o Windows só deixa trocar o foco se o app "tiver tido" entrada: simula um Alt rápido
-    user32.keybd_event(0x12, 0, 0, 0)
+    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+    SW_RESTORE, SW_SHOW = 9, 5
+    user32.ShowWindow(hwnd, SW_RESTORE if user32.IsIconic(hwnd) else SW_SHOW)
+    # o Windows só deixa trocar o foco se a janela da frente "emprestar" a entrada: liga as duas filas de entrada
+    fg = user32.GetForegroundWindow()
+    fg_tid = user32.GetWindowThreadProcessId(fg, None) if fg else 0
+    my_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+    attached = bool(fg_tid and fg_tid != my_tid and user32.AttachThreadInput(fg_tid, my_tid, True))
+    user32.keybd_event(0x12, 0, 0, 0)  # Alt rápido: libera a troca de foco
     user32.keybd_event(0x12, 0, 2, 0)
+    SWP = 0x0001 | 0x0002 | 0x0040  # NOSIZE | NOMOVE | SHOWWINDOW
+    user32.SetWindowPos(hwnd, wintypes.HWND(-1), 0, 0, 0, 0, SWP)   # por cima de tudo por um instante...
+    user32.SetWindowPos(hwnd, wintypes.HWND(-2), 0, 0, 0, 0, SWP)   # ...e volta ao normal
     ok = bool(user32.SetForegroundWindow(hwnd))
     user32.BringWindowToTop(hwnd)
+    user32.SetFocus(hwnd)
+    if attached:
+        user32.AttachThreadInput(fg_tid, my_tid, False)
     time.sleep(0.05)
-    return ok
+    return ok or user32.GetForegroundWindow() == hwnd
 
 
 # --- tela cheia sem moldura ------------------------------------------------------------

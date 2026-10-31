@@ -75,7 +75,7 @@ class Api:
     # --- jogos -----------------------------------------------------------------
     def launch(self, gid, alt=False):
         res = self._lib.launch(gid, alt)
-        if res.get("ok") and self._lib.store.settings.get("minimize_on_launch") and self._window:
+        if res.get("ok") and self._lib.store.settings.get("minimize_on_launch") and self._window and not self._lib.tv_active:
             try:
                 self._window.minimize()
             except Exception:

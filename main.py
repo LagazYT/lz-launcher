@@ -44,16 +44,24 @@ def main():
         window.show()
         window.restore()
 
+    def main_hwnd():
+        try:
+            return window.native.Handle.ToInt32()
+        except Exception:
+            return None
+
     def front():
-        """Traz o LZ Launcher para a frente (inclusive se estiver escondido na bandeja)."""
+        """Traz o LZ Launcher para a frente (inclusive se estiver minimizado ou escondido na bandeja)."""
         try:
             window.show()
         except Exception:
             pass
-        for _ in range(3):
-            if bring_to_front(APP_NAME):
+        for _ in range(4):
+            if bring_to_front(APP_NAME, main_hwnd()):
                 break
-            time.sleep(0.3)
+            time.sleep(0.25)
+        if lib.tv_active:  # o Modo TV volta ocupando a tela inteira, sem a moldura de 1 px
+            threading.Thread(target=api._fix_fullscreen_edges, daemon=True).start()
 
     def quit_app():
         quitting.set()
@@ -72,8 +80,8 @@ def main():
 
     def on_session_end(gid):
         # jogo fechou: se ele foi aberto pelo Modo TV, volta para o Modo TV
-        if lib.tv_active and st.get("tv_return", True):
-            time.sleep(1.0)
+        if lib.tv_active and st.get("tv_return", True) and not lib.tracker.running:
+            time.sleep(0.3)  # deixa a janela do jogo terminar de fechar
             front()
             lib.push_event("session_end", id=gid)
 

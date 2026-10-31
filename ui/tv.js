@@ -540,7 +540,7 @@ function scheduleTrailer(g) {
   stopTrailer();
   if (!tvSetting("tv_trailers") || !g) return;
   TV.trailerTimer = setTimeout(async () => {
-    if (!state.tv || TV.focusId !== g.id || TV.overlay) return;
+    if (!state.tv || TV.focusId !== g.id || TV.overlay || Object.keys(state.running).length) return;  // com jogo aberto, sem trailer
     let url = trailerCache[g.id];
     if (url === undefined) {
       try { url = await api("get_trailer", g.id); } catch { url = null; }
