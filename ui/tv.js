@@ -142,6 +142,7 @@ function renderTV() {
 
   // fileiras (o HTML só é refeito quando muda algo além do foco)
   const wrap = $("#tv-rows");
+  const xbox = theme() === "xbox";  // tema Xbox: blocos quadrados com a arte quadrada do jogo
   const label = x => `<div class="tv-label"><b>${esc(x.name)}</b><small>${isRunning(x.id) ? t("Jogando agora") : fmtPlaytime(x.playtime)}${x.ach ? ` · 🏆 ${x.ach.unlocked}/${x.ach.total}` : ""}</small></div>`;
   const html = rows.map((r, ri) => r.hub ? `
     <section class="tv-row tv-hubrow" data-row="${ri}">
@@ -149,7 +150,7 @@ function renderTV() {
     </section>` : `
     <section class="tv-row" data-row="${ri}">
       <h2>${esc(r.title)} <span>${r.games.length}</span></h2>
-      <div class="tv-shelf">${r.games.map((x, ci) => `<div class="tv-card" data-ri="${ri}" data-ci="${ci}" data-name="${esc(x.name)}">${coverHTML(x)}${isRunning(x.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${x.favorite ? '<span class="tv-fav">★</span>' : ""}${label(x)}</div></div>`).join("")}</div>
+      <div class="tv-shelf">${r.games.map((x, ci) => `<div class="tv-card" data-ri="${ri}" data-ci="${ci}" data-name="${esc(x.name)}">${xbox && x.tile ? `<div class="cover tile"><img src="${x.tile}" alt="" loading="lazy">` : coverHTML(x)}${isRunning(x.id) ? `<span class="tv-live">${t("Jogando")}</span>` : ""}${x.favorite ? '<span class="tv-fav">★</span>' : ""}${label(x)}</div></div>`).join("")}</div>
     </section>`).join("") || `<div class="tv-empty">${TV.query ? t("Nenhum jogo encontrado para “{q}”.", { q: esc(TV.query) }) : t("Nenhum jogo nesta aba.")}</div>`;
   if (wrap._html !== html) { wrap.innerHTML = html; wrap._html = html; }
   $$(".tv-card.focus", wrap).forEach(c => c.classList.remove("focus"));
@@ -162,7 +163,7 @@ function renderTV() {
     if (theme() === "xbox") {
       // bloco em foco perto da esquerda, como no console (conta com o tamanho final, sem esperar a animação)
       const k = { small: .85, medium: 1, large: 1.15 }[tvPref("size", "medium")] || 1;
-      const w = innerHeight * .142 * k * (row.hub ? 2.62 : 2 / 3), gap = parseFloat(getComputedStyle(shelf).columnGap) || 0;
+      const w = innerHeight * .142 * k * (row.hub ? 2.62 : 1), gap = parseFloat(getComputedStyle(shelf).columnGap) || 0;
       const ci = +cur.dataset.ci;
       left = ci > 0 ? (ci - 1) * (w + gap) : 0;
     } else left = cur.offsetLeft - shelf.clientWidth / 2 + cur.offsetWidth / 2;

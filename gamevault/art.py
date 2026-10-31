@@ -126,6 +126,140 @@ def sgdb_images(game_id_sgdb: int, key: str, kind: str) -> list:
         return []
 
 
+def sgdb_game_id(key: str, appid: int | None = None, name: str | None = None) -> int | None:
+    """Jogo no SteamGridDB: pelo AppID da Steam (exato) ou pelo nome."""
+    if not key:
+        return None
+    if appid:
+        r = _get(f"https://www.steamgriddb.com/api/v2/games/steam/{appid}", headers={"Authorization": f"Bearer {key}"})
+        try:
+            if r.json().get("success"):
+                return r.json()["data"]["id"]
+        except Exception:
+            pass
+    if name:
+        target = _norm_title(name)
+        for hit in sgdb_search(name, key)[:5]:
+            if _norm_title(hit.get("name", "")) == target:
+                return hit["id"]
+    return None
+
+
+def sgdb_square(key: str, sgdb_id: int) -> list:
+    """Artes quadradas (estilo bloco de console) mais bem votadas."""
+    r = _get(f"https://www.steamgriddb.com/api/v2/grids/game/{sgdb_id}",
+             params={"dimensions": "512x512,1024x1024", "nsfw": "false", "humor": "false", "types": "static"},
+             headers={"Authorization": f"Bearer {key}"})
+    try:
+        return [i["url"] for i in r.json().get("data", [])]
+    except Exception:
+        return []
+
+
+def sgdb_official_logo(key: str, sgdb_id: int) -> list:
+    r = _get(f"https://www.steamgriddb.com/api/v2/logos/game/{sgdb_id}", params={"styles": "official", "types": "static"},
+             headers={"Authorization": f"Bearer {key}"})
+    try:
+        return [i["url"] for i in r.json().get("data", [])]
+    except Exception:
+        return []
+
+
+# --- Bloco quadrado (Modo TV do tema Xbox) -------------------------------------------
+TILE_SIZE = 600
+
+
+def _tile_out(game_id: str, tag: str) -> Path:
+    return cache_dir("art") / f"{game_id}_tile_{hashlib.sha1(tag.encode()).hexdigest()[:8]}.jpg"
+
+
+def is_square(path: str, min_side=256) -> bool:
+    size = image_size(path)
+    return bool(size) and size[0] == size[1] and size[0] >= min_side
+
+
+def has_frame(path: str) -> bool:
+    """Arte com moldura clara em volta (cartaz com borda branca): não serve como bloco."""
+    try:
+        from PIL import Image, ImageStat
+        with Image.open(path) as im:
+            if im.mode in ("RGBA", "LA", "P"):
+                alpha = im.convert("RGBA").getchannel("A").resize((200, 200))
+                if min(alpha.getpixel(p) for p in ((1, 1), (198, 1), (1, 198), (198, 198), (100, 1), (1, 100))) < 250:
+                    return True  # cantos/bordas transparentes: arte com moldura recortada
+            im = im.convert("L").resize((200, 200))
+            # borda externa de cor única com algo bem diferente logo por dentro = moldura (cartaz, faixa, borda branca)
+            outer = [(0, 0, 200, 2), (0, 198, 200, 200), (0, 0, 2, 200), (198, 0, 200, 200)]
+            inner = [(10, 5, 190, 9), (10, 191, 190, 195), (5, 10, 9, 190), (191, 10, 195, 190)]
+            framed = 0
+            for o, i in zip(outer, inner):
+                so, si = ImageStat.Stat(im.crop(o)), ImageStat.Stat(im.crop(i))
+                if so.stddev[0] < 8 and abs(so.mean[0] - si.mean[0]) > 45:
+                    framed += 1
+            return framed >= 3
+    except Exception:
+        return False
+
+
+def compose_tile(game_id: str, hero: str, logo: str) -> str | None:
+    """Arte do jogo recortada em quadrado com o logo oficial por cima (como os blocos do console)."""
+    try:
+        from PIL import Image, ImageFilter
+        n = TILE_SIZE
+        with Image.open(hero) as h:
+            h = h.convert("RGB")
+            w, ht = h.size
+            side = min(w, ht)
+            left = int((w - side) * .5)
+            top = int((ht - side) * .5)
+            tile = h.crop((left, top, left + side, top + side)).resize((n, n), Image.LANCZOS)
+        # sombra suave embaixo, para o logo destacar
+        shade = Image.linear_gradient("L").resize((n, n)).point(lambda v: int(v * .62))
+        tile = Image.composite(Image.new("RGB", (n, n), (0, 0, 0)), tile, shade)
+        with Image.open(logo) as lg:
+            lg = lg.convert("RGBA")
+            box = lg.getbbox()
+            if box:
+                lg = lg.crop(box)
+            scale = min(n * .80 / lg.width, n * .34 / lg.height)
+            lg = lg.resize((max(1, int(lg.width * scale)), max(1, int(lg.height * scale))), Image.LANCZOS)
+            glow = Image.new("RGBA", lg.size, (0, 0, 0, 0))
+            glow.putalpha(lg.getchannel("A").filter(ImageFilter.GaussianBlur(8)).point(lambda v: int(v * .55)))
+            x = (n - lg.width) // 2
+            y = int(n * .74 - lg.height / 2)
+            tile = tile.convert("RGBA")
+            tile.alpha_composite(glow, (x, y + 3))
+            tile.alpha_composite(lg, (x, y))
+        out = _tile_out(game_id, f"c|{hero}|{logo}")
+        tile.convert("RGB").save(out, "JPEG", quality=90)
+        return str(out)
+    except Exception as e:
+        log.warning("tile %s: %s", game_id, e)
+        return None
+
+
+def compose_fit(game_id: str, cover: str) -> str | None:
+    """Capa inteira no centro, sobre a própria capa desfocada (nada é cortado)."""
+    try:
+        from PIL import Image, ImageEnhance, ImageFilter
+        n = TILE_SIZE
+        with Image.open(cover) as c:
+            c = c.convert("RGB")
+            k = max(n / c.width, n / c.height)
+            bg = c.resize((int(c.width * k) + 1, int(c.height * k) + 1), Image.LANCZOS)
+            bg = bg.crop(((bg.width - n) // 2, (bg.height - n) // 2, (bg.width - n) // 2 + n, (bg.height - n) // 2 + n))
+            bg = ImageEnhance.Brightness(bg.filter(ImageFilter.GaussianBlur(28))).enhance(.55)
+            k = min(n / c.width, n / c.height)
+            fg = c.resize((max(1, int(c.width * k)), max(1, int(c.height * k))), Image.LANCZOS)
+            bg.paste(fg, ((n - fg.width) // 2, (n - fg.height) // 2))
+        out = _tile_out(game_id, f"f|{cover}")
+        bg.save(out, "JPEG", quality=90)
+        return str(out)
+    except Exception as e:
+        log.warning("tile %s: %s", game_id, e)
+        return None
+
+
 # --- Wikipédia (capa da caixa do jogo, sem chave) -----------------------------------
 def wikipedia_boxart(name: str) -> dict | None:
     r = _get("https://en.wikipedia.org/w/api.php", params={

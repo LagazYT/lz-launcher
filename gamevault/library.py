@@ -160,6 +160,10 @@ class Library:
                     except Exception as e:
                         log.warning("info %s: %s", gid, e)
                     try:
+                        self._resolve_tile(gid, g, force)
+                    except Exception as e:
+                        log.warning("tile %s: %s", gid, e)
+                    try:
                         self._resolve_ach(gid, g, force)
                     except Exception as e:
                         log.warning("ach %s: %s", gid, e)
@@ -243,6 +247,53 @@ class Library:
         else:
             g["info_fail"] = {"lang": lang, "t": time.time()}
         time.sleep(0.4)  # não sobrecarrega a Steam/Wikipédia
+
+    # ------------------------------------------------------------------ bloco quadrado (tema Xbox)
+    TILE_VERSION = 1
+
+    def _resolve_tile(self, gid: str, g: dict, force=False):
+        """Imagem quadrada do jogo: arte oficial quadrada do PS4, arte quadrada do SteamGridDB,
+        arte + logo oficial montados ou, por último, a capa inteira sobre a capa desfocada."""
+        local = g.get("art_local") or {}
+        cover = self.image_path(gid, "cover")
+        sources = "|".join(str(x) for x in (local.get("icon"), cover, self.image_path(gid, "hero"), local.get("logo")))
+        cur = g.get("tile")
+        if not force and cur and os.path.isfile(cur) and g.get("tile_v") == self.TILE_VERSION and g.get("tile_src") == sources:
+            return
+        if not force and not cur and g.get("tile_v") == self.TILE_VERSION and g.get("tile_src") == sources:
+            return
+        tile = None
+        icon = local.get("icon")
+        if icon and os.path.isfile(icon) and art.is_square(icon):  # PS4/PS5: icon0.png é a arte oficial do bloco
+            tile = icon
+        key = self.store.settings.get("steamgriddb_key", "").strip()
+        name = g.get("name") or g.get("name_auto") or ""
+        appid = g.get("steam_appid") or g.get("steam_appid_guess") or (g.get("ach") or {}).get("appid")
+        sgdb_id = None
+        if not tile and key and self.store.settings.get("online_art", True):
+            sgdb_id = art.sgdb_game_id(key, appid, name)
+            if sgdb_id:
+                for url in art.sgdb_square(key, sgdb_id)[:5]:
+                    tile = art.download(url, gid, "tile")
+                    if tile and art.has_frame(tile):  # cartaz com moldura branca: tenta a próxima
+                        tile = None
+                    if tile:
+                        break
+        if not tile:
+            hero = self.image_path(gid, "hero")
+            logo = local.get("logo") if local.get("logo") and "librarycache" in local.get("logo", "").lower() else None
+            if hero and not logo and sgdb_id:
+                for url in art.sgdb_official_logo(key, sgdb_id)[:2]:
+                    logo = art.download(url, gid, "logo")
+                    if logo:
+                        break
+            if hero and logo and os.path.isfile(logo):
+                tile = art.compose_tile(gid, hero, logo)
+        if not tile and cover:
+            tile = art.compose_fit(gid, cover)
+        g["tile"] = tile
+        g["tile_v"] = self.TILE_VERSION
+        g["tile_src"] = sources
 
     # ------------------------------------------------------------------ conquistas
     def _resolve_ach(self, gid: str, g: dict, force=False):
@@ -434,6 +485,7 @@ class Library:
                       local.get("header"), local.get("logo"), g.get("exe_icon")],
             "hero": [g.get("hero"), local.get("hero"), online.get("hero"), local.get("header")],
             "icon": [local.get("icon"), g.get("exe_icon"), local.get("logo"), local.get("cover"), online.get("cover")],
+            "tile": [g.get("tile")],
         }.get(kind, [])
         for p in order:
             if p and os.path.isfile(p):
@@ -603,6 +655,7 @@ class Library:
             "cover": ver("cover"),
             "hero": ver("hero"),
             "icon": ver("icon"),
+            "tile": ver("tile"),
             "cover_custom": bool(g.get("cover")),
             "art_source": (g.get("art_online") or {}).get("source"),
             "info": g.get("info"),
