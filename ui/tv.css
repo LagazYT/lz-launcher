@@ -105,7 +105,7 @@
 .tv-mi.confirm { background: #c42b1c; color: #fff; }
 
 /* elementos usados só por alguns temas (ex.: Xbox) */
-.tv-icons, .tv-score, .tv-label { display: none; }
+.tv-icons, .tv-score, .tv-label, .tv-ps-actions { display: none; }
 
 /* janela de conquistas do Modo TV */
 .tvt-list { display: grid; gap: .5em; max-height: 60vh; overflow: auto; min-width: 30em; }

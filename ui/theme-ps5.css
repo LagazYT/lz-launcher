@@ -1,0 +1,366 @@
+/* =====================================================================
+   TEMA PS5 — inspirado na interface do console: navegação em abas no
+   topo, azul profundo, vidro fosco, foco com contorno branco
+   ===================================================================== */
+:root[data-theme="ps5"] {
+  --bg: #05070d;
+  --side: rgba(8, 11, 20, .72);
+  --panel: rgba(22, 27, 40, .72);
+  --panel-2: rgba(36, 42, 58, .82);
+  --line: rgba(255, 255, 255, .08);
+  --line-2: rgba(255, 255, 255, .18);
+  --text: #f5f7fb;
+  --text-2: #b6bdcc;
+  --text-3: #7c8496;
+  --accent: #2f8cff;
+  --accent-dim: rgba(47, 140, 255, .16);
+  --ps-blue: #0070d1;
+  --ps-glow: rgba(120, 170, 255, .55);
+  --play: #ffffff;
+  --play-hover: #e8eefc;
+  --danger: #ff6b6b;
+  --card: 176px;
+  --t-plat: #c9d6ea; --t-gold: #e3b44b; --t-silver: #b9c0cc; --t-bronze: #c47a4a;
+}
+[data-theme="ps5"] body { background: var(--bg); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+[data-theme="ps5"] ::-webkit-scrollbar { width: 8px; height: 8px; }
+[data-theme="ps5"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .16); border: 2px solid transparent; background-clip: padding-box; border-radius: 8px; }
+
+@keyframes ps-ring { 0%, 100% { box-shadow: 0 0 0 3px #fff, 0 0 26px var(--ps-glow), 0 16px 40px rgba(0, 0, 0, .6); } 50% { box-shadow: 0 0 0 3px #fff, 0 0 40px var(--ps-glow), 0 16px 40px rgba(0, 0, 0, .6); } }
+
+/* fundo: azul profundo do console com a arte do jogo bem suave */
+[data-theme="ps5"] #app {
+  grid-template-columns: 1fr; grid-template-rows: 72px 1fr;
+  background:
+    radial-gradient(1400px 800px at 75% -10%, rgba(22, 64, 160, .45), transparent 62%),
+    radial-gradient(1000px 700px at -10% 110%, rgba(14, 38, 100, .45), transparent 60%),
+    linear-gradient(180deg, #070b18, #03050a 70%);
+}
+[data-theme="ps5"] .ambient {
+  display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--ambient, none) center 25% / cover no-repeat; opacity: .32; filter: brightness(.55) saturate(.9);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 40%, transparent 80%);
+  transition: background-image .6s ease;
+}
+[data-theme="ps5"] .content { background: transparent; }
+[data-theme="ps5"] .view, [data-theme="ps5"] .details { z-index: 1; }
+
+/* barra lateral vira a barra de abas no topo */
+[data-theme="ps5"] .sidebar {
+  grid-row: 1; flex-direction: row; align-items: center; gap: 18px; padding: 0 32px; min-width: 0;
+  background: linear-gradient(180deg, rgba(3, 5, 12, .85), rgba(3, 5, 12, .35)); border: 0; position: relative; z-index: 5;
+}
+[data-theme="ps5"] .content { grid-row: 2; }
+[data-theme="ps5"] .wordmark { padding: 0; gap: 10px; font-size: 16px; font-weight: 600; flex: none; }
+[data-theme="ps5"] .wordmark img { width: 30px; height: 30px; }
+[data-theme="ps5"] .nav {
+  display: flex; flex-direction: row; align-items: center; gap: 2px; padding: 0; overflow-x: auto; overflow-y: hidden; min-width: 0; flex: 1;
+  scrollbar-width: none; mask-image: linear-gradient(90deg, #000 94%, transparent);
+}
+[data-theme="ps5"] .nav::-webkit-scrollbar { display: none; }
+[data-theme="ps5"] .nav-label { display: none; }
+[data-theme="ps5"] .nav-item {
+  width: auto; flex: none; height: 40px; padding: 0 14px; border-radius: 20px; font-size: 15px; font-weight: 400; color: var(--text-2); gap: 8px;
+}
+[data-theme="ps5"] .nav-item span { overflow: visible; }
+[data-theme="ps5"] .nav-item svg { width: 17px; height: 17px; }
+[data-theme="ps5"] .nav-item em { display: none; }
+[data-theme="ps5"] .nav-item:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+[data-theme="ps5"] .nav-item.active { background: none; color: #fff; font-weight: 600; box-shadow: none; position: relative; }
+[data-theme="ps5"] .nav-item.active::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px; border-radius: 2px; background: #fff; }
+[data-theme="ps5"] .nav-item.active svg { color: #fff; }
+[data-theme="ps5"] .now-playing {
+  position: fixed; left: 24px; bottom: 24px; z-index: 30; margin: 0; width: 260px; border-radius: 14px;
+  background: rgba(16, 20, 32, .92); border: 1px solid var(--line-2); backdrop-filter: blur(16px); box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+}
+[data-theme="ps5"] .update-card {
+  position: fixed; right: 24px; bottom: 24px; z-index: 30; margin: 0; width: 300px; border-radius: 14px;
+  background: rgba(16, 20, 32, .95); border: 1px solid var(--accent); backdrop-filter: blur(16px);
+}
+[data-theme="ps5"] .sidebar-foot { margin: 0; padding: 0; border: 0; display: flex; align-items: center; gap: 6px; flex: none; }
+[data-theme="ps5"] .side-btn { width: auto; height: 40px; border-radius: 20px; padding: 0 12px; gap: 8px; color: var(--text-2); }
+[data-theme="ps5"] .side-btn svg { width: 19px; height: 19px; }
+[data-theme="ps5"] .side-btn:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+[data-theme="ps5"] #btn-add span, [data-theme="ps5"] #btn-settings span { display: none; }
+[data-theme="ps5"] #btn-tv { background: #fff; color: #05070d; font-weight: 600; padding: 0 16px; }
+[data-theme="ps5"] #btn-tv:hover { background: #e8eefc; }
+[data-theme="ps5"] .version { display: none; }
+[data-theme="ps5"] .menu { top: 46px; bottom: auto; left: auto; right: 0; border-radius: 14px; background: rgba(18, 22, 34, .97); border-color: var(--line-2); backdrop-filter: blur(18px); }
+[data-theme="ps5"] .menu button { border-radius: 10px; }
+@media (max-width: 1500px) { [data-theme="ps5"] .nav-item svg { display: none; } [data-theme="ps5"] .nav-item { padding: 0 12px; } }
+
+/* cabeçalho da biblioteca */
+[data-theme="ps5"] .lib-head { border: 0; padding: 22px 40px 12px; }
+[data-theme="ps5"] .lib-title h1 { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-weight: 300; font-size: 34px; letter-spacing: .2px; }
+[data-theme="ps5"] .lib-title span { color: var(--text-2); }
+[data-theme="ps5"] .search, [data-theme="ps5"] .select, [data-theme="ps5"] .seg, [data-theme="ps5"] .tool-btn, [data-theme="ps5"] .input {
+  border-radius: 20px; background: rgba(255, 255, 255, .07); border-color: transparent; backdrop-filter: blur(12px);
+}
+[data-theme="ps5"] .search { width: 250px; height: 38px; padding: 0 14px; }
+[data-theme="ps5"] .select { height: 38px; padding: 0 14px; }
+[data-theme="ps5"] .select option { background: #121726; }
+[data-theme="ps5"] .tool-btn { width: 38px; height: 38px; border-radius: 50%; }
+[data-theme="ps5"] .seg button { height: 36px; padding: 0 13px; }
+[data-theme="ps5"] .seg button.on { background: #fff; color: #05070d; border-radius: 18px; }
+[data-theme="ps5"] .seg button + button { border-left: 0; }
+[data-theme="ps5"] .search:focus-within, [data-theme="ps5"] .input:focus, [data-theme="ps5"] .tool-btn:hover, [data-theme="ps5"] .select:hover { box-shadow: 0 0 0 2px #fff; }
+[data-theme="ps5"] input[type=range] { accent-color: #fff; }
+[data-theme="ps5"] .scanbar { margin: 0 40px; border-radius: 14px; border: 0; background: rgba(47, 140, 255, .14); }
+[data-theme="ps5"] .scroller { padding: 14px 40px 60px; }
+
+/* destaque grande: a "página do jogo" do console */
+[data-theme="ps5"] .spotlight:not([hidden]) { display: block; position: relative; height: 360px; margin-bottom: 30px; border-radius: 18px; overflow: hidden; background: #0b0f1a; box-shadow: 0 20px 60px rgba(0, 0, 0, .55); }
+[data-theme="ps5"] .sp-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+[data-theme="ps5"] .sp-bg.blur { filter: blur(30px) saturate(1.3); transform: scale(1.3); opacity: .75; }
+[data-theme="ps5"] .spotlight::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3, 5, 12, .92) 0%, rgba(3, 5, 12, .55) 40%, transparent 72%), linear-gradient(0deg, rgba(3, 5, 12, .7), transparent 55%); }
+[data-theme="ps5"] .sp-content { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; padding: 34px 40px; }
+[data-theme="ps5"] .sp-eyebrow { font-size: 13px; color: var(--text-2); letter-spacing: .3px; }
+[data-theme="ps5"] .sp-title { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-size: 46px; font-weight: 300; line-height: 1.08; margin: 6px 0 12px; text-shadow: 0 2px 24px rgba(0, 0, 0, .6); }
+[data-theme="ps5"] .sp-sub { color: var(--text-2); display: flex; gap: 14px; align-items: center; margin-bottom: 22px; flex-wrap: wrap; }
+[data-theme="ps5"] .sp-sub .pbadge { margin-right: -8px; }
+[data-theme="ps5"] .sp-actions { display: flex; gap: 12px; }
+
+/* capas: cantos arredondados e o contorno branco de foco do console */
+[data-theme="ps5"] .grid { gap: 30px 20px; }
+[data-theme="ps5"] .card { transition: transform .18s ease; }
+[data-theme="ps5"] .cover { border-radius: 12px; outline: 0; box-shadow: 0 10px 26px rgba(0, 0, 0, .5); background: #0e1320; }
+[data-theme="ps5"] .card:hover, [data-theme="ps5"] .card:focus-visible, [data-theme="ps5"] body.pad-mode .card:focus { transform: scale(1.05); z-index: 2; }
+[data-theme="ps5"] .card:hover .cover, [data-theme="ps5"] .card:focus-visible .cover, [data-theme="ps5"] body.pad-mode .card:focus .cover { outline: 0; animation: ps-ring 2.6s ease-in-out infinite; }
+[data-theme="ps5"] .cover .c-bg { filter: blur(20px) brightness(.5); }
+[data-theme="ps5"] .cover.noart { background: linear-gradient(160deg, #18264a, #070a14 70%); }
+[data-theme="ps5"] .card-meta { padding-top: 12px; }
+[data-theme="ps5"] .card-title { font-size: 14px; font-weight: 400; }
+[data-theme="ps5"] .card:hover .card-title { color: #fff; font-weight: 600; }
+[data-theme="ps5"] .card-sub { font-size: 12px; }
+[data-theme="ps5"] .card .c-play { left: 50%; transform: translateX(-50%); bottom: 12px; height: 34px; border-radius: 17px; padding: 0 18px; background: #fff; color: #05070d; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+[data-theme="ps5"] .card .c-play:hover { background: #e8eefc; }
+[data-theme="ps5"] .card .c-running { background: rgba(0, 112, 209, .92); color: #fff; text-align: center; font-weight: 600; }
+[data-theme="ps5"] .badge-row .pbadge { border-radius: 10px; }
+[data-theme="ps5"] .fav { color: #fff; }
+[data-theme="ps5"] .c-ach { border-radius: 10px; }
+
+/* lista */
+[data-theme="ps5"] .list { border-radius: 16px; border-color: var(--line); background: rgba(10, 13, 22, .72); backdrop-filter: blur(14px); }
+[data-theme="ps5"] .list-head { background: transparent; }
+[data-theme="ps5"] .row { border-bottom-color: var(--line); }
+[data-theme="ps5"] .row:hover { background: rgba(255, 255, 255, .07); }
+[data-theme="ps5"] .row .thumb { border-radius: 6px; }
+[data-theme="ps5"] .row:hover .r-play { background: #fff; border-color: #fff; color: #05070d; border-radius: 14px; }
+
+/* botões: pílulas; o principal (Jogar) é branco como no console */
+[data-theme="ps5"] .btn { border-radius: 20px; background: rgba(255, 255, 255, .1); border-color: transparent; height: 36px; padding: 0 18px; }
+[data-theme="ps5"] .btn:hover { background: rgba(255, 255, 255, .16); box-shadow: 0 0 0 2px #fff; }
+[data-theme="ps5"] .btn.primary, [data-theme="ps5"] .btn.play { background: #fff; border-color: #fff; color: #05070d; }
+[data-theme="ps5"] .btn.primary:hover, [data-theme="ps5"] .btn.play:hover { background: #e8eefc; box-shadow: 0 0 0 3px rgba(255, 255, 255, .35), 0 0 24px var(--ps-glow); }
+[data-theme="ps5"] .btn.play { height: 46px; padding: 0 36px; font-size: 15px; border-radius: 23px; }
+[data-theme="ps5"] .btn.play.running { background: rgba(255, 255, 255, .12); color: #fff; border-color: transparent; }
+[data-theme="ps5"] .btn.icon { width: 42px; height: 42px; border-radius: 50%; }
+[data-theme="ps5"] .btn.icon.on { color: #fff; }
+[data-theme="ps5"] .btn.icon.on svg { fill: #fff; }
+
+/* página do jogo */
+[data-theme="ps5"] .details { background: transparent; }
+[data-theme="ps5"] .hero { height: 460px; background: #05070d; }
+[data-theme="ps5"] .hero::after { background: linear-gradient(0deg, #05070d 0%, rgba(5, 7, 13, .55) 34%, transparent 70%), linear-gradient(90deg, rgba(3, 5, 12, .75), transparent 55%); }
+[data-theme="ps5"] .hero-title { left: 48px; bottom: 28px; }
+[data-theme="ps5"] .hero-title h1 { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-size: clamp(36px, 4.6vw, 60px); font-weight: 300; }
+[data-theme="ps5"] .back { border-radius: 20px; background: rgba(0, 0, 0, .45); border-color: var(--line-2); backdrop-filter: blur(10px); left: 30px; }
+[data-theme="ps5"] .actionbar { background: rgba(5, 7, 13, .8); border-bottom-color: var(--line); backdrop-filter: blur(18px); padding: 14px 48px; }
+[data-theme="ps5"] .d-body { padding: 28px 48px 70px; }
+[data-theme="ps5"] .d-cover .cover { border-radius: 16px; box-shadow: 0 0 0 1px var(--line-2), 0 30px 70px rgba(0, 0, 0, .6); }
+[data-theme="ps5"] .d-main h3 { color: #fff; font-weight: 600; font-size: 15px; }
+[data-theme="ps5"] .d-meta { background: var(--panel); border: 0; border-radius: 16px; padding: 4px 18px; backdrop-filter: blur(14px); }
+[data-theme="ps5"] .genre { border-radius: 14px; background: rgba(255, 255, 255, .08); border-color: transparent; color: #fff; }
+[data-theme="ps5"] .sess-list { border-radius: 14px; border-color: var(--line); background: var(--panel); }
+
+/* estatísticas, conquistas e janelas: cartões de vidro como os do console */
+[data-theme="ps5"] .kpi, [data-theme="ps5"] .panel { border-radius: 18px; border-color: transparent; background: var(--panel); backdrop-filter: blur(16px); }
+[data-theme="ps5"] .kpi b { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-weight: 300; font-size: 38px; }
+[data-theme="ps5"] .bar { background: linear-gradient(180deg, #7fb6ff, #0070d1); border-radius: 4px 4px 0 0; }
+[data-theme="ps5"] .hb-fill { background: linear-gradient(90deg, #0070d1, #7fb6ff); border-radius: 0 4px 4px 0; }
+[data-theme="ps5"] .ach { border-radius: 12px; border-color: transparent; background: var(--panel); }
+[data-theme="ps5"] .ach[data-open]:hover { box-shadow: 0 0 0 2px #fff; }
+[data-theme="ps5"] .ach-pbar i { background: #fff; }
+[data-theme="ps5"] .modal { background: rgba(0, 0, 0, .55); backdrop-filter: blur(10px); }
+[data-theme="ps5"] .modal-card { border-radius: 20px; background: rgba(14, 18, 30, .97); border-color: var(--line-2); box-shadow: 0 30px 90px rgba(0, 0, 0, .75); }
+[data-theme="ps5"] .modal-card > header h2 { font-weight: 400; font-size: 19px; }
+[data-theme="ps5"] .group-title { color: #fff; font-weight: 600; }
+[data-theme="ps5"] .folder-list, [data-theme="ps5"] .radio, [data-theme="ps5"] .theme-opt, [data-theme="ps5"] .path, [data-theme="ps5"] .art-opt, [data-theme="ps5"] .upd-notes { border-radius: 12px; }
+[data-theme="ps5"] .check input, [data-theme="ps5"] .radio input { accent-color: var(--accent); }
+[data-theme="ps5"] .toast { border-radius: 14px; background: rgba(18, 22, 34, .97); border-color: var(--line-2); backdrop-filter: blur(14px); }
+[data-theme="ps5"] .toast.ok { border-left-color: var(--accent); }
+[data-theme="ps5"] .tip { border-radius: 10px; }
+
+/* =====================================================================
+   MODO TV — tela inicial do console
+   ===================================================================== */
+[data-theme="ps5"] .tv {
+  --tv-on-bg: #fff; --tv-on-fg: #05070d; --tv-ring: #fff; --tv-radius: 12px;
+  --ps-x: 9vw; --ps-s: 9.8vh; --ps-gap: 1vh;
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-size: calc(1.55vh * var(--tv-scale));
+  grid-template-rows: auto 1fr;
+}
+[data-theme="ps5"] .tv-bg { position: absolute; inset: 0; }
+[data-theme="ps5"] .tv-bg img { filter: saturate(1.05) brightness(.95); }
+[data-theme="ps5"] .tv-shade {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .7) 0%, rgba(0, 0, 0, .15) 26%, transparent 40%),
+    linear-gradient(0deg, rgba(3, 5, 10, .94) 0%, rgba(3, 5, 10, .7) 42%, rgba(3, 5, 10, .1) 64%, transparent 72%),
+    linear-gradient(90deg, rgba(3, 5, 10, .55), transparent 45%);
+}
+[data-theme="ps5"] .tv-info, [data-theme="ps5"] .tv-hints, [data-theme="ps5"] .tv-logo, [data-theme="ps5"] .tv-exit { display: none; }
+
+/* topo: abas à esquerda; busca, opções, perfil e relógio à direita */
+[data-theme="ps5"] .tv-top { grid-row: 1; display: flex; align-items: center; gap: 0; padding: 3.2vh var(--ps-x) 0 calc(var(--ps-x) - 1vw); }
+[data-theme="ps5"] .tv-icons { display: flex; gap: 3.4vw; align-items: center; flex: 1; }
+[data-theme="ps5"] .ps-tab { background: none; border: 0; color: rgba(255, 255, 255, .62); font-size: 3vh; font-weight: 300; padding: .3em .55em; border-radius: .5em; }
+[data-theme="ps5"] .ps-tab.on { color: #fff; font-weight: 600; }
+[data-theme="ps5"] .ps-tab:hover { color: #fff; }
+[data-theme="ps5"] .ps-tab.focus { box-shadow: 0 0 0 3px #fff, 0 0 20px var(--ps-glow); color: #fff; }
+[data-theme="ps5"] .tv-search { position: absolute; left: 50%; top: 3.6vh; transform: translateX(-50%); }
+[data-theme="ps5"] .tv-chip.search { border-radius: 2em; font-size: 1.6vh; }
+[data-theme="ps5"] .tv-right { gap: 2.4vw; font-size: 1em; }
+[data-theme="ps5"] .tv-ps-actions { display: flex; gap: 2.2vw; align-items: center; }
+[data-theme="ps5"] .ps-ico { width: 5vh; height: 5vh; border-radius: 50%; border: 0; display: grid; place-items: center; background: transparent; color: #fff; padding: 0; }
+[data-theme="ps5"] .ps-ico svg { width: 3vh; height: 3vh; stroke-width: 2; }
+[data-theme="ps5"] .ps-ico:hover { background: rgba(255, 255, 255, .12); }
+[data-theme="ps5"] .ps-ico.avatar img { width: 4.6vh; height: 4.6vh; border-radius: 50%; padding: .5vh; background: radial-gradient(circle at 35% 30%, #2a4f9e, #0b1a3d 70%); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
+[data-theme="ps5"] .ps-ico.focus { box-shadow: 0 0 0 3px #fff, 0 0 20px var(--ps-glow); background: rgba(0, 0, 0, .35); }
+[data-theme="ps5"] .tv-clock { font-size: 3.6vh; font-weight: 300; letter-spacing: .5px; }
+[data-theme="ps5"] .tv-pad { font-size: 2.2vh; }
+
+/* conteúdo: fileira de blocos, ações e cartões */
+[data-theme="ps5"] .tv-rows { grid-row: 2; height: auto; overflow: hidden; min-height: 0; }
+[data-theme="ps5"] .ps-home { height: 100%; display: flex; flex-direction: column; }
+[data-theme="ps5"] .ps-row { padding-top: 2.2vh; height: calc(var(--ps-s) * 1.68 + 2.2vh); overflow: visible; }
+[data-theme="ps5"] .ps-shelf { display: flex; align-items: flex-start; gap: var(--ps-gap); padding-left: var(--ps-x); transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
+[data-theme="ps5"] .ps-tile { flex: none; width: var(--ps-s); position: relative; cursor: pointer; transition: width .22s cubic-bezier(.2, .8, .2, 1); }
+[data-theme="ps5"] .ps-tile-img { position: relative; aspect-ratio: 1 / 1; border-radius: 1.1vh; overflow: hidden; background: #141a2a; box-shadow: 0 .8vh 2vh rgba(0, 0, 0, .5); }
+[data-theme="ps5"] .ps-tile-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+[data-theme="ps5"] .ps-tile-img .ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: .6em; font-size: .85em; color: #cfd8ee; }
+[data-theme="ps5"] .ps-live { position: absolute; left: .5vh; bottom: .5vh; background: #0070d1; color: #fff; font-size: 1.2vh; font-weight: 600; padding: .2vh .7vh; border-radius: 1vh; }
+[data-theme="ps5"] .ps-tile.focus { width: calc(var(--ps-s) * 1.68); }
+[data-theme="ps5"] .ps-tile.focus .ps-tile-img { border-radius: 1.6vh; outline: 3px solid #fff; outline-offset: .45vh; box-shadow: 0 0 3vh var(--ps-glow), 0 1.6vh 3.6vh rgba(0, 0, 0, .6); }
+[data-theme="ps5"] .ps-tile.focus.dim .ps-tile-img { outline-color: rgba(255, 255, 255, .45); box-shadow: 0 1.6vh 3.6vh rgba(0, 0, 0, .6); }
+[data-theme="ps5"] .ps-name { display: none; }
+[data-theme="ps5"] .ps-tile.focus .ps-name {
+  display: flex; align-items: center; gap: 1.4vw; position: absolute; left: calc(100% + 1.6vw); top: calc(var(--ps-s) + 1.4vh);
+  white-space: nowrap; font-size: 3.4vh; font-weight: 300; text-shadow: 0 2px 16px rgba(0, 0, 0, .7);
+}
+[data-theme="ps5"] .ps-tile.focus .ps-name::after { content: ""; width: 9vw; height: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, .8), transparent); }
+
+[data-theme="ps5"] .ps-pills { margin-top: auto; display: flex; gap: 1.4vw; padding: 0 0 2.2vh var(--ps-x); }
+[data-theme="ps5"] .ps-pill {
+  display: inline-flex; align-items: center; gap: 1vw; height: 6vh; padding: 0 1.6vw 0 1.1vw; border-radius: 3vh; border: 0;
+  background: rgba(24, 28, 38, .78); backdrop-filter: blur(16px); color: #fff; font-size: 2.1vh; cursor: pointer; transition: box-shadow .15s, background .15s;
+}
+[data-theme="ps5"] .ps-pill svg { width: 2.4vh; height: 2.4vh; }
+[data-theme="ps5"] .ps-pill b { color: #40d97a; font-size: 2.6vh; font-weight: 600; }
+[data-theme="ps5"] .ps-pill span { color: rgba(255, 255, 255, .88); }
+[data-theme="ps5"] .ps-pill.primary { background: rgba(255, 255, 255, .92); color: #05070d; }
+[data-theme="ps5"] .ps-pill.primary span { color: #05070d; font-weight: 600; }
+[data-theme="ps5"] .ps-pill.on svg { fill: #fff; }
+[data-theme="ps5"] .ps-pill:hover { background: rgba(40, 46, 60, .9); }
+[data-theme="ps5"] .ps-pill.primary:hover { background: #fff; }
+[data-theme="ps5"] .ps-pill.focus { box-shadow: 0 0 0 3px #fff, 0 0 26px var(--ps-glow); }
+[data-theme="ps5"] .ps-ring { transform: rotate(-90deg); flex: none; }
+[data-theme="ps5"] .ps-ring circle { fill: none; stroke-width: 3.2; }
+[data-theme="ps5"] .ps-ring .bg { stroke: rgba(255, 255, 255, .18); }
+[data-theme="ps5"] .ps-ring .fg { stroke: #40d97a; stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
+
+[data-theme="ps5"] .ps-cards { height: 47vh; overflow: hidden; padding: 0 0 3vh; flex: none; }
+[data-theme="ps5"] .ps-grid {
+  height: 100%; display: grid; grid-template-columns: repeat(4, 26.5vw); grid-template-rows: repeat(3, 1fr); gap: 2.2vh 1.3vw;
+  padding-left: var(--ps-x); width: max-content; transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+  grid-template-areas: "tro about added act" "tro about favs act" "sto pad most act";
+}
+[data-theme="ps5"] .ps-card {
+  position: relative; overflow: hidden; border-radius: 1.3vh; background: rgba(24, 28, 38, .8); backdrop-filter: blur(20px);
+  cursor: pointer; transition: box-shadow .15s; min-height: 0;
+}
+[data-theme="ps5"] .ps-card.focus { box-shadow: 0 0 0 3px #fff, 0 0 30px var(--ps-glow); }
+[data-theme="ps5"] .ps-card:hover:not(.focus) { background: rgba(34, 40, 54, .86); }
+[data-theme="ps5"] .ps-card-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .6; }
+[data-theme="ps5"] .ps-card-bg + .ps-card-in { background: linear-gradient(0deg, rgba(10, 12, 18, .92), rgba(10, 12, 18, .2) 70%); }
+[data-theme="ps5"] .ps-card-in { position: relative; z-index: 1; height: 100%; padding: 2.2vh 1.5vw; display: flex; flex-direction: column; gap: 1vh; }
+[data-theme="ps5"] .ps-card header { display: flex; align-items: center; gap: .8vw; font-size: 2.2vh; }
+[data-theme="ps5"] .ps-card header svg { width: 2.8vh; height: 2.8vh; flex: none; }
+[data-theme="ps5"] .ps-card header b { font-weight: 600; }
+[data-theme="ps5"] .ps-card header span { margin-left: auto; font-weight: 600; }
+[data-theme="ps5"] .ps-card small { color: rgba(255, 255, 255, .68); font-size: 1.75vh; }
+[data-theme="ps5"] .c-trophies { grid-area: tro; }
+[data-theme="ps5"] .c-about { grid-area: about; }
+[data-theme="ps5"] .c-added { grid-area: added; }
+[data-theme="ps5"] .c-favs { grid-area: favs; }
+[data-theme="ps5"] .c-storage { grid-area: sto; }
+[data-theme="ps5"] .c-pad { grid-area: pad; }
+[data-theme="ps5"] .c-most { grid-area: most; }
+[data-theme="ps5"] .c-activity { grid-area: act; }
+
+/* troféus */
+[data-theme="ps5"] .ps-tro { display: flex; justify-content: space-around; align-items: flex-end; flex: 1; padding: 1vh 0; }
+[data-theme="ps5"] .ps-tro > div { display: grid; justify-items: center; gap: 1vh; }
+[data-theme="ps5"] .ps-tro b { font-size: 2.4vh; font-weight: 400; }
+[data-theme="ps5"] .ps-trophy { display: inline-grid; place-items: center; }
+[data-theme="ps5"] .ps-tro .ps-trophy svg { width: 6.6vh; height: 6.6vh; stroke-width: 1.2; }
+[data-theme="ps5"] .ps-trophy svg { fill: color-mix(in srgb, var(--c) 45%, transparent); stroke: var(--c); filter: drop-shadow(0 0 .8vh color-mix(in srgb, var(--c) 55%, transparent)); }
+[data-theme="ps5"] .ps-trophy.platinum { --c: var(--t-plat); }
+[data-theme="ps5"] .ps-trophy.gold { --c: var(--t-gold); }
+[data-theme="ps5"] .ps-trophy.silver { --c: var(--t-silver); }
+[data-theme="ps5"] .ps-trophy.bronze { --c: var(--t-bronze); }
+[data-theme="ps5"] .ps-trophy.pc { --c: #6fb5ff; }
+[data-theme="ps5"] .c-trophies footer { display: flex; justify-content: space-between; align-items: center; font-size: 2.1vh; }
+[data-theme="ps5"] .ps-lvl { display: inline-flex; align-items: center; gap: .6vw; }
+[data-theme="ps5"] .ps-lvl svg { width: 3vh; height: 3vh; }
+[data-theme="ps5"] .ps-bar { display: block; height: .5vh; border-radius: .5vh; background: rgba(255, 255, 255, .2); overflow: hidden; }
+[data-theme="ps5"] .ps-bar i { display: block; height: 100%; background: #fff; border-radius: inherit; }
+
+/* sobre o jogo, adicionado, mais jogado */
+[data-theme="ps5"] .ps-about-txt { margin-top: auto; display: grid; gap: .6vh; }
+[data-theme="ps5"] .ps-about-txt b { font-size: 2.4vh; font-weight: 600; }
+[data-theme="ps5"] .ps-playdot { width: 4.4vh; height: 4.4vh; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .22); backdrop-filter: blur(6px); margin-bottom: 1vh; }
+[data-theme="ps5"] .ps-playdot svg { width: 2vh; height: 2vh; }
+[data-theme="ps5"] .ps-side { display: flex; align-items: flex-end; justify-content: space-between; gap: 1vw; flex: 1; font-size: 2.3vh; }
+[data-theme="ps5"] .ps-side span { align-self: center; }
+[data-theme="ps5"] .ps-mini { width: 9vh; aspect-ratio: 1; border-radius: .8vh; overflow: hidden; flex: none; background: #141a2a; position: relative; margin-top: -4vh; }
+[data-theme="ps5"] .ps-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+[data-theme="ps5"] .ps-most { margin-top: auto; text-align: right; display: grid; gap: .3vh; }
+[data-theme="ps5"] .ps-most b { font-size: 2.6vh; font-weight: 700; text-shadow: 0 2px 12px rgba(0, 0, 0, .7); }
+
+/* favoritos: avatares redondos como os amigos online */
+[data-theme="ps5"] .ps-count { display: inline-flex; align-items: center; gap: .5vw; }
+[data-theme="ps5"] .ps-count i { width: 1.4vh; height: 1.4vh; border-radius: 50%; background: #40d97a; }
+[data-theme="ps5"] .ps-avatars { display: flex; gap: .7vw; flex-wrap: nowrap; overflow: hidden; }
+[data-theme="ps5"] .ps-avatars span { width: 4.4vh; height: 4.4vh; border-radius: 50%; overflow: hidden; flex: none; position: relative; background: #141a2a; box-shadow: 0 0 0 2px rgba(255, 255, 255, .15); }
+[data-theme="ps5"] .ps-avatars img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+[data-theme="ps5"] .ps-names { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* armazenamento e controle */
+[data-theme="ps5"] .ps-drive { display: grid; grid-template-columns: 8.5vw 1fr auto; align-items: center; gap: 1vw; font-size: 1.9vh; }
+[data-theme="ps5"] .c-storage .ps-card-in { gap: .2vh; padding-top: 1.8vh; padding-bottom: 1.4vh; justify-content: space-between; }
+[data-theme="ps5"] .ps-more { position: absolute; right: 1.5vw; top: 2.4vh; }
+[data-theme="ps5"] .ps-drive .ps-bar { grid-column: 2; grid-row: 1; height: .8vh; background: rgba(255, 255, 255, .14); }
+[data-theme="ps5"] .ps-drive .ps-bar i { background: linear-gradient(90deg, #2f8cff, #7c4dff 80%, #ff8a3d); }
+[data-theme="ps5"] .c-pad .ps-card-in { flex-direction: row; align-items: center; gap: 1.6vw; }
+[data-theme="ps5"] .c-pad b { display: block; font-size: 2.2vh; font-weight: 400; margin-bottom: .5vh; }
+[data-theme="ps5"] .ps-padring { position: relative; display: grid; place-items: center; flex: none; }
+[data-theme="ps5"] .ps-padring > span { position: absolute; inset: 0; display: grid; place-items: center; }
+[data-theme="ps5"] .ps-padring > span svg { width: 3.4vh; height: 3.4vh; }
+
+/* atividade recente */
+[data-theme="ps5"] .ps-act { display: flex; align-items: center; gap: 1vw; }
+[data-theme="ps5"] .ps-act .ps-mini { width: 6.4vh; margin: 0; }
+[data-theme="ps5"] .ps-act b { display: block; font-size: 2vh; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 17vw; }
+
+/* janelas do Modo TV */
+[data-theme="ps5"] .tv-overlay { background: rgba(0, 0, 0, .55); backdrop-filter: blur(12px); }
+[data-theme="ps5"] .tv-panel { background: rgba(16, 20, 32, .97); border: 1px solid rgba(255, 255, 255, .1); border-radius: 18px; box-shadow: 0 30px 90px rgba(0, 0, 0, .75); font-size: 1.1em; }
+[data-theme="ps5"] .tv-panel h2 { font-weight: 300; font-size: 1.6em; }
+[data-theme="ps5"] .tv-mi { border-radius: 12px; }
+[data-theme="ps5"] .tv-mi.focus { background: rgba(255, 255, 255, .1); color: #fff; box-shadow: 0 0 0 3px #fff, 0 0 18px var(--ps-glow); }
+[data-theme="ps5"] .tv-mi.focus b { color: #fff; }
+[data-theme="ps5"] .kb-key { border-radius: 10px; }
+[data-theme="ps5"] .kb-key.focus { background: #fff; color: #05070d; box-shadow: 0 0 0 3px #fff, 0 0 18px var(--ps-glow); }
+[data-theme="ps5"] .tv-mi.confirm { background: #c42b1c; box-shadow: none; }
+[data-theme="ps5"] .ps-aboutpanel { max-width: min(60em, calc(100vw - 4em)); }
+[data-theme="ps5"] .ps-desc { line-height: 1.6; color: rgba(255, 255, 255, .85); max-height: 40vh; overflow: auto; }

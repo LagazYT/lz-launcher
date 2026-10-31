@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="theme-cyberpunk.css">
 <link rel="stylesheet" href="theme-midnight.css">
 <link rel="stylesheet" href="theme-xbox.css">
+<link rel="stylesheet" href="theme-ps5.css">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("lz_theme") || "sober"; } catch (e) { }</script>
 </head>
 <body>
@@ -150,7 +151,7 @@
       <div class="tv-logo"><img src="icon.png" alt=""><div class="tv-who"><span>LZ Launcher</span><small class="tv-score" id="tv-score"></small></div></div>
       <nav class="tv-icons" id="tv-icons"></nav>
       <div class="tv-search" id="tv-search-chip"></div>
-      <div class="tv-right"><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="tv-right"><span class="tv-ps-actions" id="tv-ps-actions"></span><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     </header>
     <div class="tv-info" id="tv-info"></div>
     <div class="tv-rows" id="tv-rows"></div>
@@ -172,6 +173,7 @@
 <script src="i18n.js"></script>
 <script src="app.js"></script>
 <script src="tv.js"></script>
+<script src="tv-ps5.js"></script>
 <script src="trophies.js"></script>
 </body>
 </html>

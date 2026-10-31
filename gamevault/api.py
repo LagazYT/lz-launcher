@@ -226,6 +226,9 @@ class Api:
     def get_achievements(self, gid):
         return self._lib.achievements(gid)
 
+    def drives(self):
+        return self._lib.drives()
+
     def achievements_overview(self):
         return self._lib.achievements_overview()
 

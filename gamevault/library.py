@@ -426,6 +426,7 @@ class Library:
 
     def achievements_overview(self) -> dict:
         games, recent = [], []
+        types = {"platinum": 0, "gold": 0, "silver": 0, "bronze": 0, "other": 0}
         for gid, g in self.store.games.items():
             if g.get("missing") or not g.get("ach"):
                 continue
@@ -435,6 +436,8 @@ class Library:
             for k, ts in (g.get("ach_unlocked") or {}).items():
                 a = by_id.get(k)
                 if a:
+                    t = a.get("type") if g["ach"]["kind"] == "psn" else None
+                    types[t if t in types else "other"] += 1
                     recent.append({"game_id": gid, "game": g.get("name") or g.get("name_auto"), "kind": g["ach"]["kind"],
                                    "name": a.get("name"), "desc": a.get("desc"), "type": a.get("type"), "rarity": a.get("rarity"),
                                    "icon": a.get("icon"), "ts": ts})
@@ -442,7 +445,27 @@ class Library:
         recent = recent[:40]
         for r in recent:
             r["icon"] = self.icon_url(r["icon"])
-        return {"games": games, "recent": recent}
+        return {"games": games, "recent": recent, "types": types}
+
+    def drives(self) -> list:
+        """Espaço livre dos discos onde estão os jogos (cartão Armazenamento do tema PS5)."""
+        import shutil
+        seen, out = set(), []
+        for g in self.store.games.values():
+            root = g.get("root")
+            if not root or g.get("missing"):
+                continue
+            drive = os.path.splitdrive(root)[0].upper()
+            if not drive or drive in seen:
+                continue
+            seen.add(drive)
+            try:
+                u = shutil.disk_usage(drive + "\\")
+            except OSError:
+                continue
+            out.append({"drive": drive, "total": u.total, "free": u.free,
+                        "games": sum(1 for x in self.store.games.values() if (x.get("root") or "").upper().startswith(drive))})
+        return sorted(out, key=lambda d: d["drive"])
 
     def refresh_info(self, gid: str | None = None):
         def run():

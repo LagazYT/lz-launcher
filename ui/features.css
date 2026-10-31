@@ -118,6 +118,10 @@
 .tprev-xbox .tp-side { background: rgba(14, 16, 20, .92); }
 .tprev-xbox i:not(.tp-side) { background: #2a3038; border-radius: 2px; }
 .tprev-xbox .tp-a { background: #1d5f1d; box-shadow: 0 0 0 1.5px #3cc13b, 0 0 6px #3cc13b; }
+.tprev-ps5 { background: radial-gradient(circle at 75% 0%, #1d4bb0, #04060d 70%); }
+.tprev-ps5 .tp-side { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 7px; background: rgba(0, 0, 0, .55); }
+.tprev-ps5 i:not(.tp-side) { background: rgba(255, 255, 255, .16); border-radius: 3px; top: 14px !important; }
+.tprev-ps5 .tp-a { background: #2a4f9e; box-shadow: 0 0 0 1.5px #fff; }
 
 /* ---------- Foco do controle ---------- */
 body.pad-mode :focus { outline: 3px solid var(--accent) !important; outline-offset: 3px; }

@@ -105,6 +105,7 @@ function enterTV() {
   document.body.classList.add("tv-on");
   api("set_tv", true).catch(() => { });
   TV.row = 0; TV.expanded = false; TV.overlay = null; TV.top = null;
+  if (typeof PS !== "undefined") PS.zone = "row";
   $("#tv-rows")._html = null;
   applyTVPrefs();
   renderTV();
@@ -137,6 +138,7 @@ function tvLangChanged() { $("#tv-rows")._html = null; }
 /* ---------------- Render ---------------- */
 function renderTV() {
   if (!state.tv) return;
+  if (theme() === "ps5") { renderPS5(); return; }  // tela inicial no estilo do PS5 (tv-ps5.js)
   const { rows, row, game: g } = tvFocused();
   TV.row = Math.max(0, Math.min(TV.row, rows.length - 1));
 
@@ -337,6 +339,8 @@ function renderOverlay() {
       ${o.recent.length ? `<div class="tvt-list">${o.recent.slice(0, 8).map(r => `<div class="tvt">${r.icon ? `<img src="${esc(r.icon)}" alt="">` : "<img alt=\"\">"}<div><b>${esc(r.name)}</b><small>${esc(r.game)}${r.ts > 1e9 ? " · " + fmtDate(r.ts) : ""}</small></div></div>`).join("")}</div>`
         : `<p class="tv-empty" style="padding:0">${t("Nenhuma conquista desbloqueada ainda.")}</p>`}`}
       <div class="kb-hints"><span><i class="gp b">B</i>${t("Fechar")}</span></div></div>`;
+  } else if (TV.overlay === "about") {
+    html = psAboutHTML();
   } else if (TV.overlay === "quick") {
     const items = quickItems();
     html = `<div class="tv-panel tvmenu tvquick"><h2>${t("Menu rápido")} <span class="tv-clock-sm">${new Date().toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" })}</span></h2>
@@ -364,6 +368,7 @@ function kbPress(i) {
   else if (k === "space") TV.query += " ";
   else TV.query += k.toLowerCase();
   TV.row = 0; TV.cols = {};
+  if (typeof PS !== "undefined") { PS.col.q = 0; PS.zone = "row"; }
   if (k !== "ok") sfx("move");
   renderTV();
 }
@@ -425,6 +430,11 @@ function tvAction(act) {
     if (act === "a" || act === "b" || act === "start") closeOverlay();
     return;
   }
+  if (TV.overlay === "about") {
+    if (act === "a") { const g = psFocused().game; TV.overlay = null; if (g) { sfx("select"); playGame(g.id); } renderTV(); }
+    else if (act === "b" || act === "start") closeOverlay();
+    return;
+  }
   if (TV.overlay === "options" || TV.overlay === "quick") {
     const items = TV.overlay === "options" ? optionItems() : quickItems();
     if (act === "up") { TV.menu = (TV.menu + items.length - 1) % items.length; TV.confirm = null; sfx("move"); }
@@ -435,6 +445,7 @@ function tvAction(act) {
     else if (TV.overlay === "quick" && (act === "left" || act === "right") && items[TV.menu].id.startsWith("vol")) { api("system_volume", act === "left" ? "down" : "up"); return; }
     renderTV(); return;
   }
+  if (theme() === "ps5") { psAction(act); return; }  // tela inicial do PS5 (tv-ps5.js)
   if (TV.top !== null) {  // tema Xbox: ícones do topo
     const n = tvIcons().length;
     if (act === "left") { TV.top = Math.max(0, TV.top - 1); sfx("move"); }
@@ -495,6 +506,7 @@ function bindTV() {
   $("#tv").addEventListener("click", e => {
     sfxUnlock();
     if (e.target.closest("#tv-exit")) { exitTV(); return; }
+    if (theme() === "ps5" && psClick(e)) return;
     const top = e.target.closest("[data-top]");
     if (top) { hubRun(top.dataset.top); return; }
     const kb = e.target.closest("[data-kb]");
@@ -583,7 +595,7 @@ function sfx(kind) {
 /* ---------------- Fundo animado (partículas / scanlines conforme o tema) ---------------- */
 function fxStart() {
   fxStop();
-  if (!state.tv || !tvSetting("tv_fx") || theme() === "xbox") return;
+  if (!state.tv || !tvSetting("tv_fx") || theme() === "xbox" || theme() === "ps5") return;
   const canvas = $("#tv-fx");
   const ctx = canvas.getContext("2d");
   const th = theme();
