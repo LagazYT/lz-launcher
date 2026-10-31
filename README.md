@@ -137,17 +137,30 @@ Alterne entre **grade** de capas (com tamanho ajustável) e **lista** com plataf
 ### Temas
 ![Tema Black Midnight](docs/screenshots/tema-midnight.png)
 
-Quatro temas em **Configurações → Aparência** — cada um muda bem mais que as cores:
+Seis temas em **Configurações → Aparência** — cada um muda bem mais que as cores:
 
 - **Sóbrio** — cinzas neutros, visual de launcher de desktop.
 - **Neon** — roxo e ciano, com o destaque *Continue jogando* no topo da biblioteca.
 - **Cyberpunk** — amarelo neon, cantos cortados, scanlines, fundo com a arte do jogo em foco e efeitos de glitch.
 - **Black Midnight** — preto absoluto, céu estrelado com brilho da lua, barra lateral de vidro flutuante, títulos serifados e reflexo de luar nas capas.
+- **Xbox** — inspirado na tela inicial do console: arte do jogo de fundo, blocos com borda verde brilhando no foco e o Modo TV igual ao painel, com perfil, ícones no topo, blocos quadrados e cartões largos (Biblioteca, Conquistas, Buscar e Opções).
+- **PS5** — muda o app inteiro: navegação em **abas no topo**, azul profundo com vidro fosco, contorno branco de foco e botão Jogar branco. No Modo TV, a tela inicial do console: abas, fileira de blocos com o jogo em foco maior, ações (Jogar, progresso de conquistas, Favoritar) e cartões de Conquistas, Sobre o jogo, Favoritos, Armazenamento (espaço livre real dos discos), Controle, Mais jogado e Atividade recente.
 
 <p>
   <img src="docs/screenshots/tema-cyberpunk.png" width="49%" alt="Tema Cyberpunk">
   <img src="docs/screenshots/jogo-midnight.png" width="49%" alt="Tema Black Midnight na página do jogo">
 </p>
+<p>
+  <img src="docs/screenshots/tema-xbox-tv.png" width="49%" alt="Modo TV no tema Xbox">
+  <img src="docs/screenshots/tema-ps5-tv.png" width="49%" alt="Modo TV no tema PS5">
+</p>
+
+![Tema PS5](docs/screenshots/tema-ps5.png)
+
+Nos temas Xbox e PS5 cada jogo ganha uma **imagem quadrada** feita para o bloco, sem cortar logo nem arte: a arte oficial quadrada dos ports de PS4 (do próprio jogo), a arte quadrada do [SteamGridDB](https://www.steamgriddb.com) ou, se não houver, a arte oficial com o logo do jogo por cima.
+
+### Perfil
+Escolha **seu nome** e uma **foto** em **Configurações → Perfil** (ou clicando no nome na barra lateral). Eles aparecem no lugar de "LZ Launcher" na barra lateral e no Modo TV; o perfil também mostra quantas conquistas você já desbloqueou.
 
 ### Bandeja do sistema
 Fechar a janela **minimiza o LZ Launcher para a bandeja**, perto do relógio — ele continua contando o tempo de jogo. Clique duas vezes no ícone para voltar ou em **Sair** para fechar de vez. Dá para desligar nas configurações.
