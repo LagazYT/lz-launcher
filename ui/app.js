@@ -802,9 +802,6 @@ function settingsModal() {
         ${themeOptions().map(([v, n]) => `<option value="${v}" ${s.tv_theme === v ? "selected" : ""}>${esc(n)}</option>`).join("")}
       </select>
       <small>${t("Dá para trocar também dentro do Modo TV, em Opções (botão ☰).")}</small></label>
-    <div class="field" style="margin-top:6px"><span>${t("Sons do Modo TV")}</span>
-      <small>${t("Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons — inclusive no aviso de conquista — coloque os arquivos na pasta de sons.")}</small>
-      <div><button class="btn" id="open-sounds">${t("Abrir pasta de sons")}</button></div></div>
 
     <div class="sep"></div>
     <div class="group-title">${t("Controle e Modo TV")}</div>
@@ -948,7 +945,6 @@ function settingsModal() {
     reopenSettings();
     toast(t("Backup salvo: {n} jogos, {s}.", { n: r.games, s: fmtMB(r.size) }), "ok");
   };
-  $("#open-sounds").onclick = () => api("open_sounds_folder");
   $("#profile-name").onchange = async e => {
     const v = e.target.value.trim().slice(0, 24);
     e.target.value = v;

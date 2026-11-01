@@ -403,10 +403,6 @@ const I18N = {
     "Tema do Modo TV": "TV Mode theme",
     "Igual ao app": "Same as the app",
     "Dá para trocar também dentro do Modo TV, em Opções (botão ☰).": "You can also change it inside TV Mode, in Options (☰ button).",
-    "Sons do Modo TV": "TV Mode sounds",
-    "Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons, coloque os arquivos na pasta de sons.": "Each theme has its own sound style (Xbox and PS5 in the style of the consoles). To use your own sounds, put the files in the sounds folder.",
-    "Abrir pasta de sons": "Open sounds folder",
-    "Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons — inclusive no aviso de conquista — coloque os arquivos na pasta de sons.": "Each theme has its own sound style (Xbox and PS5 in the style of the consoles). To use your own sounds — including the achievement notification — put the files in the sounds folder.",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -805,10 +801,6 @@ const I18N = {
     "Tema do Modo TV": "Tema del Modo TV",
     "Igual ao app": "Igual que la app",
     "Dá para trocar também dentro do Modo TV, em Opções (botão ☰).": "También se puede cambiar dentro del Modo TV, en Opciones (botón ☰).",
-    "Sons do Modo TV": "Sonidos del Modo TV",
-    "Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons, coloque os arquivos na pasta de sons.": "Cada tema tiene su propio estilo de sonido (Xbox y PS5 al estilo de las consolas). Para usar tus propios sonidos, pon los archivos en la carpeta de sonidos.",
-    "Abrir pasta de sons": "Abrir carpeta de sonidos",
-    "Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons — inclusive no aviso de conquista — coloque os arquivos na pasta de sons.": "Cada tema tiene su propio estilo de sonido (Xbox y PS5 al estilo de las consolas). Para usar tus propios sonidos — incluso en el aviso de logro — pon los archivos en la carpeta de sonidos.",
   },
 };
 

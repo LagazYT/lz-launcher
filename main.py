@@ -95,12 +95,6 @@ def main():
         lib.push_event("pad_home", closed=closed)
 
     def on_trophy(items):
-        # som do aviso: o da pasta de sons do tema em uso (se o usuário colocou um), senão o som padrão do aviso
-        theme = st.get("tv_theme") if lib.tv_active and st.get("tv_theme") else st.get("theme")
-        files = lib.sound_files(theme or "sober")
-        for it in items:
-            rare = it.get("type") == "platinum" or (it.get("rarity") is not None and it["rarity"] < 5)
-            it["sound_url"] = (files.get("platinum") if rare else None) or files.get("trophy")
         if st.get("ach_overlay", True):
             overlay.push(items)
         else:

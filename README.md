@@ -49,11 +49,12 @@ Tempo total, gráfico de horas por dia, jogos mais jogados e sessões recentes.
 
 - Tela cheia feita para usar **só com o controle**, como num console.
 - **Trailer no fundo**, busca com teclado na tela e menu rápido com volume e desligar o PC.
+- **Minha biblioteca** (botão RT): todos os jogos em grade, com abas Todos, Recompilados, Jogos de PC e Favoritos.
 - Segure **View + Menu** para fechar o jogo e voltar ao Modo TV.
 - Pode abrir **junto com o Windows**, direto no Modo TV.
 
 ### Temas
-Seis temas que mudam o visual inteiro do app — **Sóbrio**, **Neon**, **Cyberpunk**, **Black Midnight**, **Xbox** e **PS5**. Nos temas Xbox e PS5, o Modo TV fica igual à tela inicial dos consoles.
+Seis temas que mudam o visual inteiro do app — **Sóbrio**, **Neon**, **Cyberpunk**, **Black Midnight**, **Xbox** e **PS5**. Nos temas Xbox e PS5, o Modo TV fica igual à tela inicial dos consoles. O Modo TV pode ter **um tema diferente do app**, e dá para trocar direto nele.
 
 <p>
   <img src="docs/screenshots/tema-xbox-tv.png" width="49%" alt="Modo TV no tema Xbox">

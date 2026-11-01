@@ -87,14 +87,6 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    # --- sons do Modo TV -------------------------------------------------------
-    def sound_files(self, theme):
-        return self._lib.sound_files(theme)
-
-    def open_sounds_folder(self):
-        os.startfile(str(self._lib.prepare_sounds_dir()))
-        return True
-
     # --- perfil ---------------------------------------------------------------
     def pick_avatar(self):
         res = self._window.create_file_dialog(
