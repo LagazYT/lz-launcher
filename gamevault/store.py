@@ -21,6 +21,7 @@ DEFAULT_SETTINGS = {
     "tv_sounds": True,
     "tv_trailers": True,
     "tv_fx": True,
+    "tv_theme": "",  # tema só do Modo TV ("" = o mesmo do app)
     "ach_overlay": True,
     "ach_sound": True,
     "steam_api_key": "",

@@ -102,7 +102,7 @@ function enterTV() {
   api("set_tv", true).catch(() => { });
   TV.row = 0; TV.expanded = false; TV.overlay = null; TV.top = null;
   if (typeof PS !== "undefined") PS.zone = "row";
-  $("#tv-rows")._html = null;
+  setTVTheme(tvTheme(), false);
   applyTVPrefs();
   renderTV();
   tickClock();
@@ -118,6 +118,18 @@ function exitTV() {
   $("#tv").hidden = true;
   document.body.classList.remove("tv-on");
   api("set_tv", false).catch(() => { });
+  if (theme() !== appTheme()) { applyTheme(appTheme(), false); ambientId = null; render(); }
+}
+
+// aplica um tema no Modo TV e refaz a tela (cada tema monta o Modo TV de um jeito)
+function setTVTheme(th, rerender = true) {
+  applyTheme(th, false);
+  for (const id of ["#tv-rows", "#tv-icons", "#tv-ps-actions", "#tv-grid", "#tv-hints", "#tv-battery"]) { const el = $(id); el._html = null; if (id !== "#tv-grid") el.innerHTML = ""; }
+  $("#tv-info")._key = null;
+  TV.focusId = null; TV.top = null;
+  if (typeof PS !== "undefined") PS.zone = "row";
+  loadCustomSounds();
+  if (rerender) { fxStart(); renderTV(); }
 }
 function tickClock() {
   if (!state.tv) return;
@@ -280,6 +292,7 @@ function optionItems() {
   const sortLabels = { recent: t("Jogados recentemente"), name: t("Nome"), playtime: t("Tempo de jogo"), platform: t("Plataforma") };
   const sizeLabels = { small: t("Pequenas"), medium: t("Médias"), large: t("Grandes") };
   return [
+    { id: "tv_theme", label: t("Tema do Modo TV"), value: s.tv_theme ? themeName(s.tv_theme) : t("Igual ao app") + " (" + themeName(appTheme()) + ")" },
     { id: "sort", label: t("Ordenar por"), value: sortLabels[tvSort()] },
     { id: "size", label: t("Tamanho das capas"), value: sizeLabels[tvPref("size", "medium")] },
     { id: "text", label: t("Tamanho do texto"), value: tvPref("text", "normal") === "large" ? t("Grande") : t("Normal") },
@@ -373,6 +386,14 @@ function kbPress(i) {
 
 async function optionChange(o, dir = 1) {
   const cycle = (list, cur) => list[(list.indexOf(cur) + dir + list.length) % list.length];
+  if (o.id === "tv_theme") {
+    const v = cycle(["", ...THEMES], state.lib.settings.tv_theme || "");
+    state.lib.settings.tv_theme = v;
+    api("save_settings", { tv_theme: v });
+    setTVTheme(tvTheme());
+    sfx("move");
+    return;
+  }
   if (o.id === "sort") localSet("tv_sort", cycle(TV_SORTS, tvSort()));
   else if (o.id === "size") localSet("tv_size", cycle(["small", "medium", "large"], tvPref("size", "medium")));
   else if (o.id === "text") localSet("tv_text", tvPref("text", "normal") === "large" ? "normal" : "large");
@@ -566,31 +587,120 @@ function stopTrailer() {
   if (v && v.getAttribute("src")) { v.pause(); v.removeAttribute("src"); v.load(); }
 }
 
-/* ---------------- Sons de navegação (sintetizados, sem arquivos) ---------------- */
-let audioCtx = null;
+/* ---------------- Sons de navegação (gerados na hora, sem arquivos) ----------------
+   Cada tema tem o seu estilo: padrão (toques simples), Xbox Series (clique seco, "whoosh" ao abrir)
+   e PS5 (toques suaves e cristalinos, com eco). Sons personalizados do usuário têm prioridade. */
+let audioCtx = null, sfxBus = null, sfxEcho = null, noiseBuf = null;
+const SFX_CUSTOM = {};  // { move: AudioBuffer, ... } do tema atual
+
 function sfxUnlock() {
   if (!tvSetting("tv_sounds")) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume();
+    if (!sfxBus) {
+      sfxBus = audioCtx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(audioCtx.destination);
+      // eco curto (usado no estilo PS5)
+      const d = audioCtx.createDelay(1), fb = audioCtx.createGain(), wet = audioCtx.createGain(), lp = audioCtx.createBiquadFilter();
+      d.delayTime.value = 0.085; fb.gain.value = 0.32; wet.gain.value = 0.55; lp.type = "lowpass"; lp.frequency.value = 3200;
+      d.connect(lp).connect(fb).connect(d); lp.connect(wet).connect(audioCtx.destination);
+      sfxEcho = d;
+      noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.6, audioCtx.sampleRate);
+      const ch = noiseBuf.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    }
   } catch { /* sem áudio */ }
 }
+
+// um tom com envelope (ataque rápido e queda exponencial)
+function tone(at, { freq, to = null, dur = 0.08, vol = 0.05, type = "sine", echo = false, attack = 0.004 }) {
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, at);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, at + dur * 0.8);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(sfxBus);
+  if (echo) g.connect(sfxEcho);
+  o.start(at); o.stop(at + dur + 0.02);
+}
+// ruído filtrado (cliques e "whoosh")
+function noise(at, { dur = 0.02, vol = 0.05, type = "bandpass", freq = 3000, to = null, q = 1, attack = 0.002 }) {
+  const s = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+  s.buffer = noiseBuf; f.type = type; f.Q.value = q; f.frequency.setValueAtTime(freq, at);
+  if (to) f.frequency.exponentialRampToValueAtTime(to, at + dur);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  s.connect(f).connect(g).connect(sfxBus);
+  s.start(at); s.stop(at + dur + 0.02);
+}
+
+const SFX_STYLES = {
+  // padrão: os toques de sempre
+  default: {
+    move: at => tone(at, { freq: 880, dur: 0.035, vol: 0.035 }),
+    select: at => { tone(at, { freq: 660, dur: 0.05, vol: 0.06 }); tone(at + 0.042, { freq: 990, dur: 0.07, vol: 0.06 }); },
+    back: at => { tone(at, { freq: 740, dur: 0.05, vol: 0.06 }); tone(at + 0.042, { freq: 494, dur: 0.07, vol: 0.06 }); },
+    open: at => { tone(at, { freq: 523, dur: 0.05, vol: 0.06 }); tone(at + 0.042, { freq: 784, dur: 0.08, vol: 0.06 }); },
+  },
+  // Xbox Series: clique curto e abafado ao navegar, "tic" firme ao confirmar, "whoosh" ao abrir
+  xbox: {
+    move: at => { noise(at, { dur: 0.018, vol: 0.09, freq: 2600, q: 1.4 }); tone(at, { freq: 1500, dur: 0.022, vol: 0.012, type: "triangle" }); },
+    select: at => {
+      noise(at, { dur: 0.025, vol: 0.12, freq: 1800, q: 1.2 });
+      tone(at, { freq: 420, to: 760, dur: 0.09, vol: 0.05, type: "triangle" });
+      tone(at + 0.03, { freq: 1180, dur: 0.07, vol: 0.02 });
+    },
+    back: at => { noise(at, { dur: 0.02, vol: 0.09, freq: 1500, q: 1.2 }); tone(at, { freq: 700, to: 380, dur: 0.09, vol: 0.045, type: "triangle" }); },
+    open: at => {
+      noise(at, { dur: 0.32, vol: 0.06, type: "lowpass", freq: 300, to: 3800, q: 0.7, attack: 0.12 });
+      tone(at + 0.05, { freq: 392, dur: 0.3, vol: 0.02, attack: 0.08 });
+      tone(at + 0.05, { freq: 587, dur: 0.3, vol: 0.016, attack: 0.08 });
+    },
+  },
+  // PS5: toques suaves e cristalinos, com um eco leve
+  ps5: {
+    move: at => { tone(at, { freq: 1568, dur: 0.07, vol: 0.022, echo: true }); tone(at, { freq: 784, dur: 0.05, vol: 0.01, type: "triangle" }); },
+    select: at => {
+      tone(at, { freq: 1046, dur: 0.22, vol: 0.04, echo: true });
+      tone(at + 0.06, { freq: 1568, dur: 0.28, vol: 0.035, echo: true });
+      noise(at, { dur: 0.012, vol: 0.02, freq: 6000, q: 2 });
+    },
+    back: at => { tone(at, { freq: 1175, dur: 0.12, vol: 0.03, echo: true }); tone(at + 0.05, { freq: 784, dur: 0.18, vol: 0.03, echo: true }); },
+    open: at => {
+      [988, 1319, 1760, 2349].forEach((f, i) => tone(at + i * 0.045, { freq: f, dur: 0.45, vol: 0.022, echo: true, attack: 0.01 }));
+      noise(at, { dur: 0.4, vol: 0.012, type: "highpass", freq: 5000, attack: 0.15 });
+    },
+  },
+};
+
 function sfx(kind) {
   if (!state.tv || !tvSetting("tv_sounds")) return;
   sfxUnlock();
+  if (!audioCtx || !sfxBus) return;
+  const at = audioCtx.currentTime + 0.005;
+  const custom = SFX_CUSTOM[kind];
+  if (custom) {  // som do usuário (pasta de sons personalizados)
+    const s = audioCtx.createBufferSource(); s.buffer = custom; s.connect(sfxBus); s.start(at); return;
+  }
+  const style = SFX_STYLES[theme()] || SFX_STYLES.default;
+  try { (style[kind] || SFX_STYLES.default[kind])?.(at); } catch { /* sem áudio */ }
+}
+
+// carrega os sons personalizados do tema atual (pasta "sons" nos dados do app)
+async function loadCustomSounds() {
+  for (const k of Object.keys(SFX_CUSTOM)) delete SFX_CUSTOM[k];
+  let files = {};
+  try { files = await api("sound_files", theme()) || {}; } catch { return; }
+  if (!Object.keys(files).length) return;
+  sfxUnlock();
   if (!audioCtx) return;
-  const notes = { move: [[880, .035]], select: [[660, .05], [990, .07]], back: [[740, .05], [494, .07]], open: [[523, .05], [784, .08]] }[kind];
-  if (!notes) return;
-  let at = audioCtx.currentTime;
-  for (const [freq, dur] of notes) {
-    const o = audioCtx.createOscillator(), gain = audioCtx.createGain();
-    o.type = "sine"; o.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(kind === "move" ? 0.035 : 0.06, at + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    o.connect(gain).connect(audioCtx.destination);
-    o.start(at); o.stop(at + dur + 0.02);
-    at += dur * 0.85;
+  for (const [kind, url] of Object.entries(files)) {
+    try {
+      const buf = await (await fetch(url)).arrayBuffer();
+      SFX_CUSTOM[kind] = await audioCtx.decodeAudioData(buf);
+    } catch { /* arquivo inválido: usa o som do tema */ }
   }
 }
 

@@ -109,14 +109,18 @@ function isRunning(id) { return state.running[id] !== undefined; }
 function slug(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"); }
 function gameById(id) { return state.lib.games.find(x => x.id === id); }
 function theme() { return document.documentElement.dataset.theme || "sober"; }
-function applyTheme(th) {
+function applyTheme(th, persist = true) {
   th = THEMES.includes(th) ? th : "sober";
   if (document.documentElement.dataset.theme !== th) {
     document.documentElement.dataset.theme = th;
     $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = "";
   }
-  localSet("theme", th);
+  if (persist) localSet("theme", th);
 }
+// tema do app (modo normal) e tema do Modo TV, que pode ser outro
+function appTheme() { return QP.get("theme") || state.lib.settings.theme || "sober"; }
+function tvTheme() { const v = QP.get("tvtheme") || state.lib.settings.tv_theme; return THEMES.includes(v) ? v : appTheme(); }
+function themeName(id) { return (themeOptions().find(x => x[0] === id) || [id, id])[1]; }
 function badgesHTML(g) {
   const b = [];
   if (g.kind === "recompiled") b.push(`<span class="pbadge recomp">${t("RECOMPILADO")}</span>`);
@@ -792,6 +796,15 @@ function settingsModal() {
     <div class="group-title">${t("Inicialização")}</div>
     ${chk("start_with_windows", t("Iniciar com o Windows"), t("Abre o LZ Launcher ao ligar o PC, escondido na bandeja (ou direto no Modo TV, se a opção abaixo estiver ligada)"))}
     ${chk("tv_on_start", t("Abrir no Modo TV"), t("O app já abre em tela cheia, pronto para usar com controle"))}
+    <label class="field" style="max-width:360px;margin-top:6px"><span>${t("Tema do Modo TV")}</span>
+      <select class="select input" id="set-tvtheme">
+        <option value="" ${!s.tv_theme ? "selected" : ""}>${t("Igual ao app")}</option>
+        ${themeOptions().map(([v, n]) => `<option value="${v}" ${s.tv_theme === v ? "selected" : ""}>${esc(n)}</option>`).join("")}
+      </select>
+      <small>${t("Dá para trocar também dentro do Modo TV, em Opções (botão ☰).")}</small></label>
+    <div class="field" style="margin-top:6px"><span>${t("Sons do Modo TV")}</span>
+      <small>${t("Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons, coloque os arquivos na pasta de sons.")}</small>
+      <div><button class="btn" id="open-sounds">${t("Abrir pasta de sons")}</button></div></div>
 
     <div class="sep"></div>
     <div class="group-title">${t("Controle e Modo TV")}</div>
@@ -867,6 +880,7 @@ function settingsModal() {
     }
     if (el.name === "theme") { s.theme = el.value; applyTheme(el.value); ambientId = null; render(); await api("save_settings", { theme: el.value }); }
     if (el.dataset.fmode) { await api("set_folder_mode", el.dataset.fmode, el.value); toast(t("Reclassificando os jogos…")); }
+    if (el.id === "set-tvtheme") { s.tv_theme = el.value; await api("save_settings", { tv_theme: el.value }); }
     if (el.id === "set-lang") {
       s.language = el.value;
       await api("save_settings", { language: el.value });
@@ -934,6 +948,7 @@ function settingsModal() {
     reopenSettings();
     toast(t("Backup salvo: {n} jogos, {s}.", { n: r.games, s: fmtMB(r.size) }), "ok");
   };
+  $("#open-sounds").onclick = () => api("open_sounds_folder");
   $("#profile-name").onchange = async e => {
     const v = e.target.value.trim().slice(0, 24);
     e.target.value = v;
@@ -1190,7 +1205,7 @@ async function reload() {
   state.revision = lib.revision;
   const lang = QP.get("lang") || lib.lang || "pt";
   if (lang !== LANG) { setLang(lang); $("#grid")._html = null; $("#list")._html = null; $("#spotlight").dataset.key = ""; $("#stats-body")._key = null; tvLangChanged(); }
-  applyTheme(QP.get("theme") || lib.settings.theme);
+  applyTheme(state.tv ? tvTheme() : appTheme(), !state.tv);
   render();
 }
 

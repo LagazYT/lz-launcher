@@ -747,6 +747,52 @@ class Library:
         self._ach_watch.clear()
         self.rescan_async()
 
+    # ------------------------------------------------------------------ sons personalizados do Modo TV
+    SOUND_NAMES = {"move": ("navegar", "move"), "select": ("confirmar", "select"), "back": ("voltar", "back"), "open": ("abrir", "open")}
+    SOUND_EXT = (".wav", ".mp3", ".ogg", ".m4a", ".flac")
+    SOUND_THEMES = ("sober", "neon", "cyberpunk", "midnight", "xbox", "ps5")
+
+    def sounds_dir(self):
+        from .paths import data_dir
+        return data_dir() / "sons"
+
+    def sound_files(self, theme: str) -> dict:
+        """Sons do usuário para o tema: sons/<tema>/navegar.wav ... (ou sons/ para todos os temas)."""
+        base = self.sounds_dir()
+        out = {}
+        for folder in (base / str(theme), base):
+            if not folder.is_dir():
+                continue
+            for kind, names in self.SOUND_NAMES.items():
+                if kind in out:
+                    continue
+                for n in names:
+                    f = next((folder / (n + e) for e in self.SOUND_EXT if (folder / (n + e)).is_file()), None)
+                    if f:
+                        out[kind] = f"/local/{self.local_token(str(f))}?v={int(f.stat().st_mtime)}"
+                        break
+        return out
+
+    def prepare_sounds_dir(self):
+        base = self.sounds_dir()
+        for th in self.SOUND_THEMES:
+            (base / th).mkdir(parents=True, exist_ok=True)
+        readme = base / "LEIA-ME.txt"
+        if not readme.exists():
+            readme.write_text(
+                "Sons personalizados do Modo TV do LZ Launcher\n"
+                "==============================================\n\n"
+                "Coloque arquivos de som (WAV, MP3, OGG, M4A ou FLAC) com estes nomes:\n\n"
+                "  navegar   - ao mover entre os jogos\n"
+                "  confirmar - ao abrir um jogo ou escolher uma opção\n"
+                "  voltar    - ao voltar ou fechar\n"
+                "  abrir     - ao abrir o Modo TV e os menus\n\n"
+                "Dentro da pasta de um tema (xbox, ps5, sober, neon, cyberpunk, midnight) eles valem só para esse tema.\n"
+                "Soltos aqui nesta pasta, valem para todos os temas.\n"
+                "Os que faltarem continuam com o som do tema. Use sons curtos (menos de 1 segundo).\n",
+                encoding="utf-8")
+        return base
+
     # ------------------------------------------------------------------ perfil
     def avatar_url(self) -> str | None:
         p = self.store.settings.get("profile_avatar")
