@@ -39,8 +39,8 @@ function psGames() {
 function psFocused() {
   const list = psGames();
   const key = TV.query ? "q" : PS.tab;
-  const col = Math.max(0, Math.min(PS.col[key] || 0, list.length - 1));
-  return { list, col, game: list[col] || null, key };
+  const col = Math.max(0, Math.min(PS.col[key] || 0, list.length));  // list.length = bloco "Biblioteca de jogos"
+  return { list, col, game: list[col] || null, key, libTile: col === list.length };
 }
 
 /* ---------------- dados dos cartões (atualizados de tempos em tempos) ---------------- */
@@ -145,6 +145,7 @@ function renderPS5() {
   const shelfHTML = list.map((x, ci) => `<div class="ps-tile" data-psc="${ci}">
       <div class="ps-tile-img">${tileImg(x) || `<span class="ph">${esc(x.name)}</span>`}${isRunning(x.id) ? `<span class="ps-live">${t("Jogando")}</span>` : ""}</div>
       <div class="ps-name">${esc(x.name)}</div></div>`).join("")
+    + `<div class="ps-tile ps-libtile" data-psc="${list.length}"><div class="ps-tile-img">${XB_ICONS.quick}</div><div class="ps-name">${t("Biblioteca de jogos")}</div></div>`
     || `<div class="tv-empty">${TV.query ? t("Nenhum jogo encontrado para “{q}”.", { q: esc(TV.query) }) : t("Nenhum jogo nesta aba.")}</div>`;
   setHTMLonce(shelf, shelfHTML);
   $$(".ps-tile.focus", shelf).forEach(x => x.classList.remove("focus"));
@@ -185,7 +186,7 @@ function renderPS5() {
   renderTVHeader();
   renderTVHints();
   renderOverlay();
-  if (g && g.id !== TV.focusId) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
+  if (g && g.id !== TV.focusId && !GRID.open) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
 }
 
 /* ---------------- controle ---------------- */
@@ -257,9 +258,10 @@ function psAction(act) {
       break;
     case "row":
       if (act === "left" && col > 0) PS.col[key] = col - 1;
-      else if (act === "right" && col < list.length - 1) PS.col[key] = col + 1;
+      else if (act === "right" && col < list.length) PS.col[key] = col + 1;
       else if (act === "up") { PS.zone = "top"; PS.top = TV.query ? tabs : PS.tab; }
       else if (act === "down" && g) { PS.zone = "pills"; PS.pill = 0; }
+      else if (act === "a" && col === list.length) { openGrid(); return; }
       else if (act === "a" && g) { sfx("select"); playGame(g.id); return; }
       else if (act === "x" && g) { sfx("select"); toggleFav(g.id); return; }
       else if (act === "b") { if (TV.query) { TV.query = ""; sfx("back"); renderTV(); return; } sfx("back"); exitTV(); return; }

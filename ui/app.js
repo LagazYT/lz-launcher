@@ -1088,7 +1088,7 @@ async function installUpdate() {
 }
 
 /* ---------------- Controle (gamepad) ---------------- */
-const PAD_BUTTONS = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right", 16: "guide" };
+const PAD_BUTTONS = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 6: "lt", 7: "rt", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right", 16: "guide" };
 const pad = { prev: {}, next: {}, announced: false };
 
 function startGamepad() {
@@ -1343,6 +1343,7 @@ async function boot() {
     if (g && QP.get("sec") === "trophies") setTimeout(() => { const s = $("#d-trophies-sec"); s.scrollIntoView(); let p = s.parentElement; while (p && p.scrollHeight <= p.clientHeight + 5) p = p.parentElement; if (p) p.scrollTop -= 90; }, 2500);
   }
   if (QP.get("tv") || (state.lib.settings.tv_on_start && !QP.get("page") && !QP.get("game"))) enterTV();
+  if (state.tv && QP.get("tvgrid")) openGrid();
   if (state.tv && QP.get("pscard") && typeof PS !== "undefined") { PS.zone = "cards"; PS.card = +QP.get("pscard"); renderTV(); }
   if (state.tv && QP.get("tvov")) { if (QP.get("q")) TV.query = QP.get("q"); openOverlay(QP.get("tvov")); }
   if (QP.get("settings")) settingsModal();

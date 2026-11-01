@@ -151,11 +151,12 @@
       <div class="tv-logo"><img src="icon.png" alt="" id="tv-avatar"><div class="tv-who"><span id="tv-name">LZ Launcher</span><small class="tv-score" id="tv-score"></small></div></div>
       <nav class="tv-icons" id="tv-icons"></nav>
       <div class="tv-search" id="tv-search-chip"></div>
-      <div class="tv-right"><span class="tv-ps-actions" id="tv-ps-actions"></span><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="tv-right"><button class="tv-libbtn" id="tv-libbtn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="Minha biblioteca">Minha biblioteca</span><i class="gp rt">RT</i></button><span class="tv-ps-actions" id="tv-ps-actions"></span><span id="tv-battery"></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit" id="tv-exit" data-i18n-title="Sair do Modo TV"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     </header>
     <div class="tv-info" id="tv-info"></div>
     <div class="tv-rows" id="tv-rows"></div>
     <footer class="tv-hints" id="tv-hints"></footer>
+    <div class="tv-grid" id="tv-grid" hidden></div>
     <div class="tv-overlay" id="tv-overlay" hidden></div>
   </section>
 
@@ -174,6 +175,7 @@
 <script src="app.js"></script>
 <script src="tv.js"></script>
 <script src="tv-ps5.js"></script>
+<script src="tv-grid.js"></script>
 <script src="trophies.js"></script>
 </body>
 </html>

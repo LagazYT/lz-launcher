@@ -78,12 +78,8 @@ function hubCardHTML(h, ri, ci) {
 function hubRun(id) {
   TV.top = null;
   sfx("select");
-  if (id === "library") {
-    const rows = tvRows();
-    const i = rows.findIndex(r => r.id === "all");
-    if (i >= 0) TV.row = i;
-    renderTV();
-  } else if (id === "trophies") openOverlay("trophies");
+  if (id === "library") openGrid();
+  else if (id === "trophies") openOverlay("trophies");
   else if (id === "search") openOverlay("keyboard");
   else if (id === "options") openOverlay("options");
   else if (id === "quick") openOverlay("quick");
@@ -116,6 +112,7 @@ function enterTV() {
 function exitTV() {
   if (!state.tv) return;
   state.tv = false;
+  GRID.open = false;
   stopTrailer();
   fxStop();
   $("#tv").hidden = true;
@@ -138,7 +135,7 @@ function tvLangChanged() { $("#tv-rows")._html = null; }
 /* ---------------- Render ---------------- */
 function renderTV() {
   if (!state.tv) return;
-  if (theme() === "ps5") { renderPS5(); return; }  // tela inicial no estilo do PS5 (tv-ps5.js)
+  if (theme() === "ps5") { renderPS5(); renderTVGrid(); return; }  // tela inicial no estilo do PS5 (tv-ps5.js)
   const { rows, row, game: g } = tvFocused();
   TV.row = Math.max(0, Math.min(TV.row, rows.length - 1));
 
@@ -178,7 +175,8 @@ function renderTV() {
   renderTVHeader();
   renderTVHints();
   renderOverlay();
-  if (g && !g.hub && g.id !== TV.focusId) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
+  if (g && !g.hub && g.id !== TV.focusId && !GRID.open) { TV.focusId = g.id; scheduleTrailer(g); setTVBackground(g); }
+  renderTVGrid();
 }
 
 function setTVBackground(g) {
@@ -265,7 +263,7 @@ function renderTVHints() {
   const { game: g } = tvFocused();
   const hints = TV.overlay ? [] : (TV.top !== null || g?.hub) ? [["a", "A", t("Abrir")], ["b", "B", TV.top !== null ? t("Voltar") : t("Sair do Modo TV")]] : [
     ["a", "A", t("Jogar")], ["x", "X", g?.favorite ? t("Remover favorito") : t("Favoritar")], ["y", "Y", t("Buscar")],
-    ["gp-start", "☰", t("Opções")], ["gp-view", "⧉", t("Menu rápido")], ["b", "B", TV.query ? t("Limpar busca") : t("Sair do Modo TV")],
+    ["rt", "RT", t("Minha biblioteca")], ["gp-start", "☰", t("Opções")], ["gp-view", "⧉", t("Menu rápido")], ["b", "B", TV.query ? t("Limpar busca") : t("Sair do Modo TV")],
   ];
   const html = hints.map(([c, k, label]) => `<span><i class="gp ${c}">${k}</i>${label}</span>`).join("");
   const el = $("#tv-hints");
@@ -445,6 +443,8 @@ function tvAction(act) {
     else if (TV.overlay === "quick" && (act === "left" || act === "right") && items[TV.menu].id.startsWith("vol")) { api("system_volume", act === "left" ? "down" : "up"); return; }
     renderTV(); return;
   }
+  if (act === "rt") { openGrid(); return; }        // Minha biblioteca (tv-grid.js), em todos os temas
+  if (GRID.open) { gridAction(act); return; }
   if (theme() === "ps5") { psAction(act); return; }  // tela inicial do PS5 (tv-ps5.js)
   if (TV.top !== null) {  // tema Xbox: ícones do topo
     const n = tvIcons().length;
@@ -506,6 +506,8 @@ function bindTV() {
   $("#tv").addEventListener("click", e => {
     sfxUnlock();
     if (e.target.closest("#tv-exit")) { exitTV(); return; }
+    if (e.target.closest("#tv-libbtn")) { openGrid(); return; }
+    if (gridClick(e)) return;
     if (theme() === "ps5" && psClick(e)) return;
     const top = e.target.closest("[data-top]");
     if (top) { hubRun(top.dataset.top); return; }

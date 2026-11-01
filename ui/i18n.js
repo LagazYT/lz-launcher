@@ -399,6 +399,7 @@ const I18N = {
     "Backup automático ligado nessa pasta.": "Automatic backup turned on for that folder.",
     "Fazendo backup…": "Backing up…",
     "a pasta não existe mais": "the folder no longer exists",
+    "Biblioteca de jogos": "Game library",
   },
   es: {
     "menos de 1 min": "menos de 1 min",
@@ -793,6 +794,7 @@ const I18N = {
     "Backup automático ligado nessa pasta.": "Copia automática activada en esa carpeta.",
     "Fazendo backup…": "Haciendo copia…",
     "a pasta não existe mais": "la carpeta ya no existe",
+    "Biblioteca de jogos": "Biblioteca de juegos",
   },
 };
 
