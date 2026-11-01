@@ -814,6 +814,21 @@ function settingsModal() {
     </div>
 
     <div class="sep"></div>
+    <div class="group-title">${t("Backup")}</div>
+    <p class="hint">${t("Guarda tempo de jogo, histórico, conquistas, favoritos, nomes, capas, perfil e configurações num arquivo .zip. Use para formatar, trocar de PC ou reinstalar o app sem perder nada.")}</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn primary" id="bk-create">${t("Fazer backup…")}</button>
+      <button class="btn" id="bk-restore">${t("Restaurar backup…")}</button>
+    </div>
+    ${chk("backup_auto", t("Backup automático toda semana"), t("Guarda os 3 backups mais recentes na pasta escolhida. Escolha uma pasta do OneDrive, Google Drive ou um pendrive para não perder nada se o PC for formatado."))}
+    <div class="input-row" style="margin:4px 0 4px">
+      <div class="path" id="bk-dir" style="flex:1;margin:0">${esc(s.backup_dir || t("Nenhuma pasta escolhida"))}</div>
+      <button class="btn" id="bk-pick">${t("Escolher pasta…")}</button>
+      ${s.backup_dir ? `<button class="btn" id="bk-now">${t("Fazer agora")}</button>` : ""}
+    </div>
+    <small class="hint">${s.backup_last ? t("Último backup automático: {d}", { d: fmtDate(s.backup_last) + " " + new Date(s.backup_last * 1000).toLocaleTimeString(LOCALE(), { hour: "2-digit", minute: "2-digit" }) }) : t("Nenhum backup automático feito ainda.")}</small>
+
+    <div class="sep"></div>
     <div class="group-title">${t("Atualizações")}</div>
     <p class="hint" style="margin-bottom:8px">${t("Versão instalada")}: <b style="color:var(--text)">${esc(state.update?.current || "")}</b>${state.update?.mode === "portable" ? " (portable)" : ""}</p>
     <div class="upd-row"><span id="upd-status" class="upd-status"></span>
@@ -880,6 +895,44 @@ function settingsModal() {
     state.lib.avatar = null;
     renderProfileName();
     const y = $("#modal-body").scrollTop; settingsModal(); $("#modal-body").scrollTop = y;
+  };
+  const reopenSettings = () => { const y = $("#modal-body").scrollTop; settingsModal(); $("#modal-body").scrollTop = y; };
+  const fmtMB = b => (b / 1048576).toLocaleString(LOCALE(), { maximumFractionDigits: 1 }) + " MB";
+  $("#bk-create").onclick = async () => {
+    toast(t("Escolha onde salvar o backup…"));
+    const r = await api("backup_create");
+    if (!r) return;
+    if (r.error) { toast(t("Não foi possível fazer o backup: {e}", { e: r.error }), "error"); return; }
+    toast(t("Backup salvo: {n} jogos, {s}.", { n: r.games, s: fmtMB(r.size) }), "ok");
+  };
+  $("#bk-restore").onclick = async () => {
+    const info = await api("backup_pick_file");
+    if (!info) return;
+    if (info.error) { toast(t("Esse arquivo não é um backup do LZ Launcher."), "error"); return; }
+    const when = info.created ? fmtDate(info.created) : "?";
+    if (!confirm(t("Restaurar o backup de {d} com {n} jogos?\n\nA biblioteca atual será substituída pelos dados do backup (uma cópia dela fica guardada na pasta de dados do app).", { d: when, n: info.games }))) return;
+    toast(t("Restaurando backup…"));
+    const r = await api("backup_restore", info.path);
+    if (!r || r.error) { toast(t("Não foi possível restaurar: {e}", { e: r?.error || "?" }), "error"); return; }
+    await reload();
+    reopenSettings();
+    toast(t("Backup restaurado! Procurando os jogos neste PC…"), "ok");
+  };
+  $("#bk-pick").onclick = async () => {
+    const dir = await api("backup_pick_dir");
+    if (!dir) return;
+    state.lib.settings.backup_dir = dir;
+    if (!state.lib.settings.backup_auto) { state.lib.settings.backup_auto = true; await api("save_settings", { backup_auto: true }); }
+    reopenSettings();
+    toast(t("Backup automático ligado nessa pasta."), "ok");
+  };
+  if ($("#bk-now")) $("#bk-now").onclick = async () => {
+    toast(t("Fazendo backup…"));
+    const r = await api("backup_now");
+    if (!r || r.error) { toast(t("Não foi possível fazer o backup: {e}", { e: r?.error === "nodir" ? t("a pasta não existe mais") : (r?.error || "?") }), "error"); return; }
+    state.lib.settings.backup_last = Date.now() / 1000;
+    reopenSettings();
+    toast(t("Backup salvo: {n} jogos, {s}.", { n: r.games, s: fmtMB(r.size) }), "ok");
   };
   $("#profile-name").onchange = async e => {
     const v = e.target.value.trim().slice(0, 24);

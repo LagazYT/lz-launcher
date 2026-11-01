@@ -31,6 +31,62 @@ class Api:
         res = self._window.create_file_dialog(webview.FileDialog.FOLDER)
         return res[0] if res else None
 
+    # --- backup ---------------------------------------------------------------
+    def backup_create(self):
+        """Pergunta onde salvar e grava o backup."""
+        from . import backup
+        from .paths import data_dir
+        res = self._window.create_file_dialog(webview.FileDialog.SAVE, save_filename=backup.default_name(),
+                                              file_types=("Backup do LZ Launcher (*.zip)",))
+        if not res:
+            return None
+        dest = res if isinstance(res, str) else res[0]
+        if not dest.lower().endswith(".zip"):
+            dest += ".zip"
+        try:
+            return backup.create(dest, self._lib.store, data_dir())
+        except Exception as e:
+            return {"error": str(e)}
+
+    def backup_pick_file(self):
+        """Escolhe um backup para restaurar e devolve o resumo dele (para confirmar antes)."""
+        from . import backup
+        res = self._window.create_file_dialog(webview.FileDialog.OPEN, file_types=("Backup do LZ Launcher (*.zip)", "Todos os arquivos (*.*)"))
+        if not res:
+            return None
+        return backup.inspect(res[0]) or {"error": "invalid"}
+
+    def backup_restore(self, path):
+        from . import backup
+        from .paths import data_dir
+        from .store import DEFAULT_SETTINGS
+        try:
+            res = backup.restore(path, self._lib.store, data_dir(), DEFAULT_SETTINGS)
+        except Exception as e:
+            return {"error": str(e)}
+        self._lib.after_restore()
+        return res
+
+    def backup_pick_dir(self):
+        res = self._window.create_file_dialog(webview.FileDialog.FOLDER)
+        if not res:
+            return None
+        self._lib.store.settings["backup_dir"] = res[0]
+        self._lib.store.save()
+        return res[0]
+
+    def backup_now(self):
+        """Backup na pasta do backup automático, na hora."""
+        from . import backup
+        from .paths import data_dir
+        folder = self._lib.store.settings.get("backup_dir")
+        if not folder or not os.path.isdir(folder):
+            return {"error": "nodir"}
+        try:
+            return backup.run_auto(self._lib.store, data_dir())
+        except Exception as e:
+            return {"error": str(e)}
+
     # --- perfil ---------------------------------------------------------------
     def pick_avatar(self):
         res = self._window.create_file_dialog(

@@ -54,6 +54,7 @@ class Library:
         self.tracker.start()
         self.updater.start()
         threading.Thread(target=self._ach_loop, name="achievements", daemon=True).start()
+        threading.Thread(target=self._backup_loop, name="backup", daemon=True).start()
         self.rescan_async()
 
     def rescan_async(self, force_art=False):
@@ -111,11 +112,44 @@ class Library:
             self.store.save()
         self.resolve_art_async(force=force_art)
 
+    # dados do usuário que acompanham o jogo quando ele muda de pasta
+    USER_KEYS = ("playtime", "sessions", "history", "last_played", "last_session", "added", "favorite", "hidden", "name",
+                 "kind", "args", "notes", "cover", "hero", "ach", "ach_unlocked", "platform_user", "ext_playtime")
+
+    @staticmethod
+    def _identity(rec: dict) -> str | None:
+        """O mesmo jogo em outra pasta: mesmo Title ID (dumps) ou mesmo nome detectado."""
+        if rec.get("title_id"):
+            return "t:" + str(rec["title_id"]).upper()
+        name = art._norm_title(rec.get("name_auto") or rec.get("folder_name") or "")
+        return "n:" + name if name else None
+
+    def _relink_moved(self, games: dict, fresh: list):
+        has_stats = lambda r: r.get("playtime") or r.get("history") or r.get("ach_unlocked") or r.get("favorite") or r.get("name")
+        lost = {}
+        for gid, rec in games.items():
+            if rec.get("missing") and rec.get("source") == "folder" and has_stats(rec):
+                key = self._identity(rec)
+                if key:
+                    lost.setdefault(key, []).append(gid)
+        for gid in fresh:
+            rec = games.get(gid)
+            key = self._identity(rec) if rec else None
+            if not key or not lost.get(key) or has_stats(rec):
+                continue
+            old_id = lost[key].pop(0)
+            old = games.pop(old_id)
+            for k in self.USER_KEYS:
+                if k in old:
+                    rec[k] = old[k]
+            log.info("jogo %s mudou de pasta: histórico levado de %s para %s", rec.get("name_auto"), old_id, gid)
+
     def _merge(self, found: list):
         now = time.time()
         excluded = set(self.store.data.setdefault("excluded", []))
         with self.store.lock:
             games = self.store.games
+            before = set(games)
             seen = set()
             for g in found:
                 gid = g["id"]
@@ -137,6 +171,7 @@ class Library:
                     rec["missing"] = not Path(rec.get("exe") or rec.get("exe_auto") or "").exists()
                 else:
                     rec["missing"] = True
+            self._relink_moved(games, [gid for gid in seen if gid not in before])
 
     # ------------------------------------------------------------------ capas
     def resolve_art_async(self, force=False, only: str | None = None):
@@ -693,6 +728,24 @@ class Library:
         if (g.get("kind") or g.get("kind_auto")) == "normal" and plat == "Console" and not g.get("dump"):
             return "PC"
         return plat
+
+    # ------------------------------------------------------------------ backup
+    def _backup_loop(self):
+        """Backup automático semanal na pasta escolhida (confere ao abrir e a cada 6 horas)."""
+        from . import backup
+        from .paths import data_dir
+        time.sleep(60)
+        while True:
+            try:
+                if backup.auto_backup_due(self.store.settings):
+                    backup.run_auto(self.store, data_dir())
+            except Exception as e:
+                log.warning("backup automático: %s", e)
+            time.sleep(6 * 3600)
+
+    def after_restore(self):
+        self._ach_watch.clear()
+        self.rescan_async()
 
     # ------------------------------------------------------------------ perfil
     def avatar_url(self) -> str | None:
