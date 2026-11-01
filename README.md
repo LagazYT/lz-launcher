@@ -67,6 +67,9 @@ Seis temas que mudam o visual inteiro do app — **Sóbrio**, **Neon**, **Cyberp
 ### Perfil
 Escolha seu **nome** e sua **foto**, que aparecem no app e no Modo TV.
 
+### Backup
+Faça **backup** de tudo — tempo de jogo, histórico, conquistas, favoritos, capas, perfil e configurações — e restaure depois de formatar ou num PC novo. Também dá para ligar o **backup automático semanal** numa pasta do OneDrive, Google Drive ou pendrive.
+
 ## Aviso
 
 O LZ Launcher **não inclui jogos**: ele só organiza e abre o que já está no seu PC, sem alterar nada nas pastas dos jogos. Projeto da comunidade, sem relação com Sony, Microsoft, Valve ou outras empresas citadas.
