@@ -748,7 +748,8 @@ class Library:
         self.rescan_async()
 
     # ------------------------------------------------------------------ sons personalizados do Modo TV
-    SOUND_NAMES = {"move": ("navegar", "move"), "select": ("confirmar", "select"), "back": ("voltar", "back"), "open": ("abrir", "open")}
+    SOUND_NAMES = {"move": ("navegar", "move"), "select": ("confirmar", "select"), "back": ("voltar", "back"), "open": ("abrir", "open"),
+                   "trophy": ("conquista", "trofeu", "trophy"), "platinum": ("platina", "rara", "platinum")}
     SOUND_EXT = (".wav", ".mp3", ".ogg", ".m4a", ".flac")
     SOUND_THEMES = ("sober", "neon", "cyberpunk", "midnight", "xbox", "ps5")
 
@@ -786,7 +787,9 @@ class Library:
                 "  navegar   - ao mover entre os jogos\n"
                 "  confirmar - ao abrir um jogo ou escolher uma opção\n"
                 "  voltar    - ao voltar ou fechar\n"
-                "  abrir     - ao abrir o Modo TV e os menus\n\n"
+                "  abrir     - ao abrir o Modo TV e os menus\n"
+                "  conquista - no aviso de conquista/troféu desbloqueado\n"
+                "  platina   - no aviso de troféu de platina ou conquista rara (menos de 5% dos jogadores)\n\n"
                 "Dentro da pasta de um tema (xbox, ps5, sober, neon, cyberpunk, midnight) eles valem só para esse tema.\n"
                 "Soltos aqui nesta pasta, valem para todos os temas.\n"
                 "Os que faltarem continuam com o som do tema. Use sons curtos (menos de 1 segundo).\n",

@@ -803,7 +803,7 @@ function settingsModal() {
       </select>
       <small>${t("Dá para trocar também dentro do Modo TV, em Opções (botão ☰).")}</small></label>
     <div class="field" style="margin-top:6px"><span>${t("Sons do Modo TV")}</span>
-      <small>${t("Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons, coloque os arquivos na pasta de sons.")}</small>
+      <small>${t("Cada tema tem o seu estilo de som (Xbox e PS5 no estilo dos consoles). Para usar seus próprios sons — inclusive no aviso de conquista — coloque os arquivos na pasta de sons.")}</small>
       <div><button class="btn" id="open-sounds">${t("Abrir pasta de sons")}</button></div></div>
 
     <div class="sep"></div>

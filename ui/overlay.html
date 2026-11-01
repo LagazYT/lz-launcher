@@ -76,7 +76,13 @@ window.showTrophy = (a, lang, sound) => {
   if (a.rarity != null) foot.push(tr.rare.replace("{p}", a.rarity));
   document.getElementById("foot").textContent = foot.filter(Boolean).join(" · ");
   el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
-  if (sound) chime(a.type === "platinum");
+  if (sound) {
+    if (a.sound_url) {  // som escolhido pelo usuário (pasta de sons do tema)
+      const au = new Audio(a.sound_url);
+      au.volume = 0.9;
+      au.play().catch(() => chime(a.type === "platinum"));
+    } else chime(a.type === "platinum");
+  }
 };
 window.hideTrophy = () => document.getElementById("t").classList.remove("on");
 </script>
