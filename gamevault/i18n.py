@@ -11,6 +11,9 @@ _T = {
     "Jogo não encontrado.": {"en": "Game not found.", "es": "Juego no encontrado."},
     "Executável não existe mais:\n{path}": {"en": "The executable no longer exists:\n{path}",
                                             "es": "El ejecutable ya no existe:\n{path}"},
+    "Este jogo precisa ser aberto como administrador. A permissão foi recusada.": {
+        "en": "This game needs to run as administrator. Permission was denied.",
+        "es": "Este juego necesita ejecutarse como administrador. Se denegó el permiso."},
     "Nenhum executável definido para este jogo. Use \"Editar\" para escolher o .exe.": {
         "en": "No executable set for this game. Use \"Edit\" to choose the .exe.",
         "es": "No hay ejecutable definido para este juego. Usa \"Editar\" para elegir el .exe."},

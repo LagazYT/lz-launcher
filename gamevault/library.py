@@ -627,7 +627,19 @@ class Library:
                 if ext in (".exe", ".com"):
                     cmd = subprocess.list2cmdline([target]) + (" " + args if args else "")
                     flags = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-                    subprocess.Popen(cmd, cwd=cwd, creationflags=flags, close_fds=True)
+                    try:
+                        subprocess.Popen(cmd, cwd=cwd, creationflags=flags, close_fds=True)
+                    except OSError as e:
+                        if getattr(e, "winerror", None) != 740:  # ERROR_ELEVATION_REQUIRED
+                            raise
+                        # o jogo exige administrador: abre pelo Windows, que mostra o aviso do UAC
+                        try:
+                            os.startfile(target, "runas", arguments=args, cwd=cwd)
+                        except OSError as e2:
+                            if getattr(e2, "winerror", None) == 1223:  # ERROR_CANCELLED: recusou no UAC
+                                return {"ok": False, "error": tr(
+                                    "Este jogo precisa ser aberto como administrador. A permissão foi recusada.", lang)}
+                            raise
                 else:
                     os.startfile(target, cwd=cwd) if args == "" else os.startfile(target, arguments=args, cwd=cwd)
             else:
